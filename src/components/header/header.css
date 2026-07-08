@@ -1,0 +1,42 @@
+.site-header {
+  background: rgba(15, 23, 42, 0.92);
+  backdrop-filter: blur(12px);
+}
+
+.brand {
+  color: #f8fafc;
+}
+
+.brand:hover,
+.brand:focus-visible {
+  color: #ffffff;
+}
+
+.brand-mark {
+  width: 2.5rem;
+  height: 2.5rem;
+  background: linear-gradient(135deg, #d946ef, #22c55e);
+  color: #fff;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.brand-tagline {
+  font-size: 0.8rem;
+}
+
+.main-nav .nav-pill {
+  border-color: rgba(255, 255, 255, 0.25);
+  color: #e2e8f0;
+}
+
+.main-nav .nav-pill:hover,
+.main-nav .nav-pill.active {
+  background: #ffffff;
+  color: #0f172a;
+  border-color: #ffffff;
+}
+
+.locale-switch .btn {
+  min-width: 3rem;
+}
