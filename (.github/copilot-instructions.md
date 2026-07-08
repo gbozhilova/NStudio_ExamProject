@@ -13,3 +13,11 @@ Favor small, testable increments and validate often.
 Keep the waiting-time product discovery flow simple and conversion-focused in v1.
 Target Netlify deployment with routing support for direct URL visits and refreshes.
 Be concise, pragmatic, and consistent with the existing file structure.
+{
+  "mcpServers": {
+    "supabase": {
+      "type": "http",
+      "url": "https://mcp.supabase.com/mcp?project_ref=flwsxmgnfmiigddcvqdk"
+    }
+  }
+}

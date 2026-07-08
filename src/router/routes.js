@@ -1,10 +1,10 @@
 ﻿const ROUTE_DEFINITIONS = [
-  { path: '/', aliases: ['/home'], titleKey: 'nav.home', loader: () => import('../pages/home/home.js') },
-  { path: '/services', titleKey: 'nav.services', loader: () => import('../pages/services/services.js') },
-  { path: '/products', titleKey: 'nav.products', loader: () => import('../pages/products/products.js') },
-  { path: '/calendar', titleKey: 'nav.calendar', loader: () => import('../pages/calendar/calendar.js') },
-  { path: '/customers', titleKey: 'nav.customers', loader: () => import('../pages/customers/customers.js') },
-  { path: '/quiz', aliases: ['/products/calendar/customers/quiz'], titleKey: 'nav.quiz', loader: () => import('../pages/quiz/quiz.js') }
+  { path: '/', aliases: ['/home'], titleKey: 'nav.home', load: () => import('../pages/home/home.js') },
+  { path: '/services', titleKey: 'nav.services', load: () => import('../pages/services/services.js') },
+  { path: '/products', titleKey: 'nav.products', load: () => import('../pages/products/products.js') },
+  { path: '/calendar', titleKey: 'nav.calendar', load: () => import('../pages/calendar/calendar.js') },
+  { path: '/customers', titleKey: 'nav.customers', load: () => import('../pages/customers/customers.js') },
+  { path: '/quiz', titleKey: 'nav.quiz', load: () => import('../pages/quiz/quiz.js') }
 ];
 
 const ROUTE_LOOKUP = new Map();
