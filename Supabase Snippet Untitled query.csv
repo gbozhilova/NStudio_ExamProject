@@ -1,0 +1,41 @@
+schemaname,tablename,policyname,cmd,roles
+public,booking_blocks,Admins and staff manage booking blocks,ALL,{authenticated}
+public,booking_blocks,Users read booking blocks,SELECT,"{anon,authenticated}"
+public,bookings,Admins and staff manage all bookings,ALL,{authenticated}
+public,bookings,Customers create own bookings,INSERT,{authenticated}
+public,bookings,Customers delete own bookings,DELETE,{authenticated}
+public,bookings,Customers update own bookings,UPDATE,{authenticated}
+public,bookings,Customers view own bookings,SELECT,{authenticated}
+public,messages,Admins and staff read all messages,SELECT,{authenticated}
+public,messages,Admins and staff update messages,UPDATE,{authenticated}
+public,messages,Users read own messages,SELECT,{authenticated}
+public,messages,Users send own messages,INSERT,{authenticated}
+public,product_recommendations,Admins and staff manage product recommendations,ALL,{authenticated}
+public,product_recommendations,Users read own product recommendations,SELECT,{authenticated}
+public,products,Admins and staff delete products,DELETE,{authenticated}
+public,products,Admins and staff update products,UPDATE,{authenticated}
+public,products,Admins and staff write products,INSERT,{authenticated}
+public,products,Public read products,SELECT,"{anon,authenticated}"
+public,quiz_answers,Admins and staff read all quiz answers,SELECT,{authenticated}
+public,quiz_answers,Users insert own quiz answers,INSERT,{authenticated}
+public,quiz_answers,Users read own quiz answers,SELECT,{authenticated}
+public,quiz_answers,Users update own quiz answers,UPDATE,{authenticated}
+public,quiz_questions,Admins and staff manage quiz questions,ALL,{authenticated}
+public,quiz_questions,Users read active quiz questions,SELECT,"{anon,authenticated}"
+public,services,Admins and staff delete services,DELETE,{authenticated}
+public,services,Admins and staff update services,UPDATE,{authenticated}
+public,services,Admins and staff write services,INSERT,{authenticated}
+public,services,Public read services,SELECT,"{anon,authenticated}"
+public,user_roles,Admins and staff view all roles,SELECT,{authenticated}
+public,user_roles,Admins manage roles,ALL,{authenticated}
+public,user_roles,Users view own roles,SELECT,{authenticated}
+storage,objects,Admin and staff manage product images,ALL,{authenticated}
+storage,objects,Public read product images,SELECT,"{anon,authenticated}"
+storage,objects,Users delete own message images,DELETE,{authenticated}
+storage,objects,Users delete own profile images,DELETE,{authenticated}
+storage,objects,Users read own message images,SELECT,{authenticated}
+storage,objects,Users read own profile images,SELECT,{authenticated}
+storage,objects,Users update own message images,UPDATE,{authenticated}
+storage,objects,Users update own profile images,UPDATE,{authenticated}
+storage,objects,Users upload own message images,INSERT,{authenticated}
+storage,objects,Users upload own profile images,INSERT,{authenticated}
