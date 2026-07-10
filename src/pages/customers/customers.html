@@ -1,4 +1,54 @@
-<section class="page-panel p-4 rounded-4 shadow-sm">
-  <h1 class="h2 fw-bold mb-3" data-i18n="customers.heading">Customers</h1>
-  <p class="mb-0" data-i18n="customers.copy">Route shell for customer profiles and preferences.</p>
-</section>
+<div class="customers-page">
+  <!-- Toolbar -->
+  <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+    <h1 class="h2 fw-bold mb-0" data-i18n="customers.heading">Customers</h1>
+    <input
+      id="customer-search"
+      type="search"
+      class="form-control form-control-sm customers-search"
+      placeholder="Search by name…"
+    />
+  </div>
+
+  <!-- Status alert -->
+  <div id="customers-alert" class="alert d-none" role="alert"></div>
+
+  <!-- Loading spinner -->
+  <div id="customers-loading" class="text-center py-5">
+    <div class="spinner-border text-primary" role="status">
+      <span class="visually-hidden">Loading…</span>
+    </div>
+  </div>
+
+  <!-- Table -->
+  <div id="customers-table-wrap" class="d-none">
+    <div class="table-responsive">
+      <table class="table table-hover align-middle">
+        <thead class="table-light">
+          <tr>
+            <th data-i18n="customers.col.name">Name</th>
+            <th data-i18n="customers.col.phone">Phone</th>
+            <th data-i18n="customers.col.created">Joined</th>
+            <th class="text-end" data-i18n="customers.col.actions">Actions</th>
+          </tr>
+        </thead>
+        <tbody id="customers-tbody"></tbody>
+      </table>
+    </div>
+    <div id="customers-pagination" class="d-flex justify-content-end mt-2"></div>
+  </div>
+
+  <!-- Customer modal (view / edit) -->
+  <div class="modal fade" id="customer-modal" tabindex="-1" aria-labelledby="customer-modal-title" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="customer-modal-title"></h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body" id="customer-modal-body"></div>
+        <div class="modal-footer" id="customer-modal-footer"></div>
+      </div>
+    </div>
+  </div>
+</div>

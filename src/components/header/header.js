@@ -2,9 +2,24 @@ import template from './header.html?raw';
 import './header.css';
 import { normalizePath } from '../../router/routes.js';
 import { getLocale } from '../../services/i18n.js';
+import { signOut } from '../../services/auth.js';
 
-export function renderHeader() {
-  return template;
+export function renderHeader(currentPath, locale, user) {
+  const authSlot = user
+    ? `<span class="text-white-50 small d-none d-md-inline">${escapeHtml(user.email)}</span>
+       <button id="header-logout" class="btn btn-sm btn-outline-danger">Logout</button>`
+    : `<a href="/login" data-nav-link data-route="/login" class="nav-pill btn btn-sm btn-outline-light">Login</a>
+       <a href="/register" data-nav-link data-route="/register" class="nav-pill btn btn-sm btn-outline-light">Register</a>`;
+
+  return template.replace('{{AUTH_SLOT}}', authSlot);
+}
+
+function escapeHtml(str) {
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
 }
 
 export function bindHeaderInteractions(root, { currentPath, onLocaleChange }) {
@@ -18,8 +33,19 @@ export function bindHeaderInteractions(root, { currentPath, onLocaleChange }) {
 
   root.querySelectorAll('[data-locale]').forEach((button) => {
     const locale = button.getAttribute('data-locale');
-
     button.classList.toggle('active', locale === getLocale());
     button.addEventListener('click', () => onLocaleChange(locale));
   });
+
+  const logoutBtn = root.querySelector('#header-logout');
+  if (logoutBtn) {
+    logoutBtn.addEventListener('click', async () => {
+      try {
+        await signOut();
+      } catch {
+        // session already gone — navigate regardless
+      }
+      // onAuthStateChange in app.js handles clearSession + re-render
+    });
+  }
 }

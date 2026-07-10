@@ -1,0 +1,41 @@
+<section class="auth-page d-flex align-items-center justify-content-center py-5">
+  <div class="auth-card card shadow-sm p-4 p-md-5">
+    <div class="text-center mb-4">
+      <span class="brand-mark-lg rounded-circle d-inline-flex align-items-center justify-content-center mb-3">NS</span>
+      <h1 class="h3 fw-bold" data-i18n="auth.login.heading">Sign In</h1>
+    </div>
+
+    <div id="login-error" class="alert alert-danger d-none" role="alert"></div>
+
+    <form id="login-form" novalidate>
+      <div class="mb-3">
+        <label for="login-email" class="form-label" data-i18n="auth.login.email">Email</label>
+        <input
+          id="login-email"
+          type="email"
+          class="form-control"
+          autocomplete="email"
+          required
+        />
+      </div>
+      <div class="mb-4">
+        <label for="login-password" class="form-label" data-i18n="auth.login.password">Password</label>
+        <input
+          id="login-password"
+          type="password"
+          class="form-control"
+          autocomplete="current-password"
+          required
+        />
+      </div>
+      <button id="login-submit" type="submit" class="btn btn-primary w-100">
+        <span class="btn-label" data-i18n="auth.login.submit">Sign In</span>
+        <span class="spinner-border spinner-border-sm d-none ms-2" role="status" aria-hidden="true"></span>
+      </button>
+    </form>
+
+    <p class="text-center mt-4 mb-0 text-muted small">
+      <a href="/register" data-nav-link data-i18n="auth.login.noAccount">No account? Register</a>
+    </p>
+  </div>
+</section>

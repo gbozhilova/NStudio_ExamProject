@@ -1,0 +1,65 @@
+<section class="auth-page d-flex align-items-center justify-content-center py-5">
+  <div class="auth-card card shadow-sm p-4 p-md-5">
+    <div class="text-center mb-4">
+      <span class="brand-mark-lg rounded-circle d-inline-flex align-items-center justify-content-center mb-3">NS</span>
+      <h1 class="h3 fw-bold" data-i18n="auth.register.heading">Create Account</h1>
+    </div>
+
+    <div id="register-error" class="alert alert-danger d-none" role="alert"></div>
+    <div id="register-success" class="alert alert-success d-none" role="alert" data-i18n="auth.register.success">
+      Account created. Redirecting…
+    </div>
+
+    <form id="register-form" novalidate>
+      <div class="mb-3">
+        <label for="register-name" class="form-label" data-i18n="auth.register.name">Full Name</label>
+        <input
+          id="register-name"
+          type="text"
+          class="form-control"
+          autocomplete="name"
+          required
+        />
+      </div>
+      <div class="mb-3">
+        <label for="register-email" class="form-label" data-i18n="auth.login.email">Email</label>
+        <input
+          id="register-email"
+          type="email"
+          class="form-control"
+          autocomplete="email"
+          required
+        />
+      </div>
+      <div class="mb-3">
+        <label for="register-password" class="form-label" data-i18n="auth.login.password">Password</label>
+        <input
+          id="register-password"
+          type="password"
+          class="form-control"
+          autocomplete="new-password"
+          minlength="8"
+          required
+        />
+      </div>
+      <div class="mb-4">
+        <label for="register-confirm" class="form-label" data-i18n="auth.register.confirm">Confirm Password</label>
+        <input
+          id="register-confirm"
+          type="password"
+          class="form-control"
+          autocomplete="new-password"
+          required
+        />
+      </div>
+      <button id="register-submit" type="submit" class="btn btn-primary w-100">
+        <span class="btn-label" data-i18n="auth.register.submit">Register</span>
+        <span class="spinner-border spinner-border-sm d-none ms-2" role="status" aria-hidden="true"></span>
+      </button>
+    </form>
+
+    <p class="text-center mt-4 mb-0 text-muted small">
+      <a href="/login" data-nav-link data-i18n="auth.register.hasAccount">Already have an account? Sign in</a>
+    </p>
+  </div>
+</section>

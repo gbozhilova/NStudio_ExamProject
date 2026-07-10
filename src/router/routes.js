@@ -1,10 +1,12 @@
 ﻿const ROUTE_DEFINITIONS = [
-  { path: '/', aliases: ['/home'], titleKey: 'nav.home', load: () => import('../pages/home/home.js') },
-  { path: '/services', titleKey: 'nav.services', load: () => import('../pages/services/services.js') },
-  { path: '/products', titleKey: 'nav.products', load: () => import('../pages/products/products.js') },
-  { path: '/calendar', titleKey: 'nav.calendar', load: () => import('../pages/calendar/calendar.js') },
-  { path: '/customers', titleKey: 'nav.customers', load: () => import('../pages/customers/customers.js') },
-  { path: '/quiz', titleKey: 'nav.quiz', load: () => import('../pages/quiz/quiz.js') }
+  { path: '/', aliases: ['/home'], titleKey: 'nav.home', requiredRoles: null, load: () => import('../pages/home/home.js') },
+  { path: '/services', titleKey: 'nav.services', requiredRoles: null, load: () => import('../pages/services/services.js') },
+  { path: '/products', titleKey: 'nav.products', requiredRoles: null, load: () => import('../pages/products/products.js') },
+  { path: '/calendar', titleKey: 'nav.calendar', requiredRoles: ['staff', 'admin'], load: () => import('../pages/calendar/calendar.js') },
+  { path: '/customers', titleKey: 'nav.customers', requiredRoles: ['staff', 'admin'], load: () => import('../pages/customers/customers.js') },
+  { path: '/quiz', titleKey: 'nav.quiz', requiredRoles: null, load: () => import('../pages/quiz/quiz.js') },
+  { path: '/login', titleKey: 'nav.login', requiredRoles: null, load: () => import('../pages/auth/login.js') },
+  { path: '/register', titleKey: 'nav.register', requiredRoles: null, load: () => import('../pages/auth/register.js') }
 ];
 
 const ROUTE_LOOKUP = new Map();
@@ -30,4 +32,9 @@ export function resolveRoute(pathname) {
 
 export function isInternalPath(pathname) {
   return ROUTE_LOOKUP.has(normalizePath(pathname));
+}
+
+export function getRequiredRoles(pathname) {
+  const route = resolveRoute(normalizePath(pathname));
+  return route?.requiredRoles ?? null;
 }

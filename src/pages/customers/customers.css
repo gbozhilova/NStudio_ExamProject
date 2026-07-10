@@ -1,3 +1,9 @@
-.page-panel {
-  background: rgba(255, 255, 255, 0.92);
+.customers-search {
+  max-width: 260px;
+}
+
+.customers-page .table th {
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
 }
