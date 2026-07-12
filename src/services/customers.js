@@ -3,17 +3,23 @@ import { supabase } from './supabase.js';
 const PAGE_SIZE = 20;
 
 export async function listCustomers({ search = '', page = 1, pageSize = PAGE_SIZE } = {}) {
+  // Fetch customer user_ids first (no direct FK between profiles and user_roles)
+  const { data: roleRows, error: roleError } = await supabase
+    .from('user_roles')
+    .select('user_id')
+    .eq('role', 'customer');
+  if (roleError) throw roleError;
+
+  const customerIds = (roleRows ?? []).map((r) => r.user_id);
+  if (!customerIds.length) return { data: [], count: 0 };
+
   const from = (page - 1) * pageSize;
   const to = from + pageSize - 1;
 
   let query = supabase
     .from('profiles')
-    .select(
-      `id, full_name, phone, notes, avatar_url, created_at, updated_at,
-       user_roles!inner ( role )`,
-      { count: 'exact' }
-    )
-    .eq('user_roles.role', 'customer')
+    .select('id, full_name, phone, notes, avatar_url, created_at, updated_at', { count: 'exact' })
+    .in('id', customerIds)
     .order('full_name', { ascending: true })
     .range(from, to);
 

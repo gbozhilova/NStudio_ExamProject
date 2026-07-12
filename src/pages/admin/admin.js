@@ -80,18 +80,31 @@ export function afterRender({ root }) {
     loadEl.classList.remove('d-none');
     tableEl.classList.add('d-none');
 
-    let query = supabase
-      .from('profiles')
-      .select('id, full_name, phone, created_at, user_roles(role)', { count: 'exact' })
+    // Two separate queries then merge in JS (no FK between profiles and user_roles)
+    let profileQuery = supabase.from('profiles')
+      .select('id, full_name, phone, created_at')
       .order('full_name');
+    if (search.trim()) profileQuery = profileQuery.ilike('full_name', `%${search.trim()}%`);
 
-    if (search.trim()) query = query.ilike('full_name', `%${search.trim()}%`);
+    const [{ data: profiles, error: pErr }, { data: roleRows, error: rErr }] = await Promise.all([
+      profileQuery,
+      supabase.from('user_roles').select('user_id, role')
+    ]);
 
-    const { data, error } = await query;
     loadEl.classList.add('d-none');
     tableEl.classList.remove('d-none');
 
-    if (error) { showAlert(error.message, 'danger'); return; }
+    if (pErr || rErr) { showAlert((pErr || rErr).message, 'danger'); return; }
+
+    const roleMap = {};
+    for (const r of roleRows ?? []) {
+      if (!roleMap[r.user_id]) roleMap[r.user_id] = [];
+      roleMap[r.user_id].push(r.role);
+    }
+    const data = (profiles ?? []).map((p) => ({
+      ...p,
+      user_roles: (roleMap[p.id] ?? []).map((role) => ({ role }))
+    }));
 
     const tbody = root.querySelector('#admin-users-tbody');
     if (!data.length) {
@@ -157,13 +170,111 @@ export function afterRender({ root }) {
       });
   }
 
+  function openAddUserModal() {
+    const body = `
+      <div id="modal-error" class="alert alert-danger d-none"></div>
+      <div class="row g-3">
+        <div class="col-12"><label class="form-label">${t('auth.register.name')}</label>
+          <input id="au-name" class="form-control" placeholder="Full name" /></div>
+        <div class="col-12"><label class="form-label">${t('auth.login.email')}</label>
+          <input id="au-email" type="email" class="form-control" /></div>
+        <div class="col-12"><label class="form-label">${t('auth.login.password')}</label>
+          <input id="au-password" type="password" class="form-control" placeholder="Min 8 characters" minlength="8" /></div>
+        <div class="col-12"><label class="form-label">${t('admin.col.role')}</label>
+          <select id="au-role" class="form-select">
+            <option value="customer">customer</option>
+            <option value="staff">staff</option>
+            <option value="admin">admin</option>
+          </select></div>
+      </div>`;
+
+    openModal(t('admin.btn.addUser'), body,
+      `<button class="btn btn-secondary" data-bs-dismiss="modal">${t('modal.close')}</button>
+       <button id="modal-save" class="btn btn-success">
+         <span class="btn-label">${t('admin.btn.addUser')}</span>
+         <span class="spinner-border spinner-border-sm d-none ms-2"></span>
+       </button>`,
+      async () => {
+        const errEl = modalBody.querySelector('#modal-error');
+        const saveBtn = modalFooter.querySelector('#modal-save');
+        const spinner = saveBtn.querySelector('.spinner-border');
+        const fullName = modalBody.querySelector('#au-name').value.trim();
+        const email = modalBody.querySelector('#au-email').value.trim();
+        const password = modalBody.querySelector('#au-password').value;
+        const role = modalBody.querySelector('#au-role').value;
+
+        if (!email || !password) {
+          errEl.textContent = t('auth.error.requiredFields');
+          errEl.classList.remove('d-none');
+          return;
+        }
+        if (password.length < 8) {
+          errEl.textContent = t('auth.error.passwordTooShort');
+          errEl.classList.remove('d-none');
+          return;
+        }
+
+        saveBtn.disabled = true;
+        spinner.classList.remove('d-none');
+        errEl.classList.add('d-none');
+
+        const { data, error } = await supabase.functions.invoke('create-user', {
+          body: { fullName, email, password, role }
+        });
+
+        saveBtn.disabled = false;
+        spinner.classList.add('d-none');
+
+        if (error || data?.error) {
+          errEl.textContent = data?.error ?? error.message;
+          errEl.classList.remove('d-none');
+          return;
+        }
+
+        bsModal.hide();
+        showAlert(t('admin.user.created'));
+        panes.users = false;
+        loadUsers();
+      });
+  }
+
   async function deleteUser(userId) {
-    if (!confirm(t('customers.delete.confirm'))) return;
-    const { error } = await supabase.from('profiles').delete().eq('id', userId);
-    if (error) { showAlert(error.message, 'danger'); return; }
-    showAlert(t('customers.delete.success'));
-    panes.users = false;
-    loadUsers();
+    openModal(
+      t('admin.user.deleteTitle'),
+      `<p class="mb-0">${t('customers.delete.confirm')}</p>`,
+      `<button class="btn btn-secondary" data-bs-dismiss="modal">${t('modal.close')}</button>
+       <button id="modal-save" class="btn btn-danger">
+         <span class="btn-label">${t('customers.btn.delete')}</span>
+         <span class="spinner-border spinner-border-sm d-none ms-2"></span>
+       </button>`,
+      async () => {
+        const errEl = document.createElement('div');
+        const saveBtn = modalFooter.querySelector('#modal-save');
+        const spinner = saveBtn.querySelector('.spinner-border');
+
+        saveBtn.disabled = true;
+        spinner.classList.remove('d-none');
+
+        const { data, error } = await supabase.functions.invoke('delete-user', {
+          body: { userId }
+        });
+
+        if (error || data?.error) {
+          saveBtn.disabled = false;
+          spinner.classList.add('d-none');
+          const alertEl = root.querySelector('#admin-alert');
+          bsModal.hide();
+          showAlert(data?.error ?? error.message, 'danger');
+          return;
+        }
+
+        bsModal.hide();
+        showAlert(t('customers.delete.success'));
+        panes.users = false;
+        loadUsers();
+      }
+    );
+    bsModal.show();
   }
 
   let userSearchTimer = null;
@@ -171,6 +282,8 @@ export function afterRender({ root }) {
     clearTimeout(userSearchTimer);
     userSearchTimer = setTimeout(() => { panes.users = false; loadUsers(e.target.value); }, 300);
   });
+
+  root.querySelector('#admin-user-add').addEventListener('click', () => openAddUserModal());
 
   // ── SERVICES tab ──────────────────────────────────────────────────────────
 
