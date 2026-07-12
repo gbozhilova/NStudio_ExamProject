@@ -3,6 +3,13 @@ import './admin.css';
 import { Modal } from 'bootstrap';
 import { supabase } from '../../services/supabase.js';
 import { translateRoot, t } from '../../services/i18n.js';
+import {
+  BUCKETS, ACCEPTED_TYPES,
+  uploadFile, getPublicUrl, getSignedUrl, removeFiles, listFiles,
+  downloadFile, triggerDownload,
+  productImagePath, avatarPath, bookingFilePath,
+  formatBytes, isImage
+} from '../../services/storage.js';
 
 export function render() {
   return template;
@@ -82,7 +89,7 @@ export function afterRender({ root }) {
 
     // Two separate queries then merge in JS (no FK between profiles and user_roles)
     let profileQuery = supabase.from('profiles')
-      .select('id, full_name, phone, created_at')
+      .select('id, full_name, phone, created_at, avatar_url')
       .order('full_name');
     if (search.trim()) profileQuery = profileQuery.ilike('full_name', `%${search.trim()}%`);
 
@@ -114,8 +121,11 @@ export function afterRender({ root }) {
 
     tbody.innerHTML = data.map((u) => {
       const roles = (u.user_roles ?? []).map((r) => roleBadge(r.role)).join(' ');
+      const avatar = u.avatar_url
+        ? `<img src="${escapeHtml(u.avatar_url)}" class="rounded-circle me-2" style="width:32px;height:32px;object-fit:cover">`
+        : `<span class="rounded-circle bg-secondary d-inline-flex align-items-center justify-content-center me-2 text-white" style="width:32px;height:32px;font-size:0.7rem">${escapeHtml((u.full_name ?? '?')[0].toUpperCase())}</span>`;
       return `<tr>
-        <td class="fw-semibold">${escapeHtml(u.full_name ?? '—')}</td>
+        <td><div class="d-flex align-items-center">${avatar}<span class="fw-semibold">${escapeHtml(u.full_name ?? '—')}</span></div></td>
         <td>${roles || roleBadge('—')}</td>
         <td>${escapeHtml(u.phone ?? '—')}</td>
         <td class="text-muted small">${fmt(u.created_at)}</td>
@@ -135,6 +145,10 @@ export function afterRender({ root }) {
   }
 
   function openEditUser(userId, user) {
+    const avatarPreview = user.avatar_url
+      ? `<img id="eu-avatar-preview" src="${escapeHtml(user.avatar_url)}" class="rounded-circle mb-2" style="width:64px;height:64px;object-fit:cover">`
+      : `<div id="eu-avatar-preview" class="rounded-circle bg-secondary d-flex align-items-center justify-content-center mb-2 text-white fw-bold" style="width:64px;height:64px;font-size:1.2rem">${(user.full_name ?? '?')[0].toUpperCase()}</div>`;
+
     const body = `
       <div id="modal-error" class="alert alert-danger d-none"></div>
       <div class="mb-3"><label class="form-label">${t('auth.register.name')}</label>
@@ -146,27 +160,62 @@ export function afterRender({ root }) {
           <option value="customer" ${(user.user_roles?.[0]?.role ?? 'customer') === 'customer' ? 'selected' : ''}>customer</option>
           <option value="staff" ${(user.user_roles?.[0]?.role) === 'staff' ? 'selected' : ''}>staff</option>
           <option value="admin" ${(user.user_roles?.[0]?.role) === 'admin' ? 'selected' : ''}>admin</option>
-        </select></div>`;
+        </select></div>
+      <div class="mb-3">
+        <label class="form-label">${t('admin.col.avatar')}</label>
+        <div>${avatarPreview}</div>
+        <input id="eu-avatar" type="file" class="form-control form-control-sm" accept="image/*" />
+      </div>`;
 
     openModal(t('customers.edit.heading'), body,
       `<button class="btn btn-secondary" data-bs-dismiss="modal">${t('modal.close')}</button>
-       <button id="modal-save" class="btn btn-primary">${t('customers.edit.save')}</button>`,
+       <button id="modal-save" class="btn btn-primary">
+         <span>${t('customers.edit.save')}</span>
+         <span class="spinner-border spinner-border-sm d-none ms-2"></span>
+       </button>`,
       async () => {
         const errEl = modalBody.querySelector('#modal-error');
+        const saveBtn = modalFooter.querySelector('#modal-save');
+        const spinner = saveBtn.querySelector('.spinner-border');
         const name = modalBody.querySelector('#eu-name').value.trim();
         const phone = modalBody.querySelector('#eu-phone').value.trim();
         const role = modalBody.querySelector('#eu-role').value;
+        const avatarFile = modalBody.querySelector('#eu-avatar').files[0];
+
         if (!name) { errEl.textContent = t('auth.error.requiredFields'); errEl.classList.remove('d-none'); return; }
+
+        saveBtn.disabled = true;
+        spinner.classList.remove('d-none');
+        errEl.classList.add('d-none');
+
         try {
-          await supabase.from('profiles').update({ full_name: name, phone: phone || null, updated_at: new Date().toISOString() }).eq('id', userId);
-          // update role: delete old, insert new
+          let avatarUrl = user.avatar_url ?? null;
+          if (avatarFile) {
+            const path = avatarPath(userId, avatarFile.name);
+            await uploadFile(BUCKETS.AVATARS, path, avatarFile);
+            avatarUrl = getPublicUrl(BUCKETS.AVATARS, path);
+          }
+
+          await supabase.from('profiles').update({
+            full_name: name,
+            phone: phone || null,
+            avatar_url: avatarUrl,
+            updated_at: new Date().toISOString()
+          }).eq('id', userId);
+
           await supabase.from('user_roles').delete().eq('user_id', userId);
           await supabase.from('user_roles').insert({ user_id: userId, role });
+
           bsModal.hide();
           showAlert(t('customers.edit.success'));
           panes.users = false;
           loadUsers();
-        } catch (err) { errEl.textContent = err.message; errEl.classList.remove('d-none'); }
+        } catch (err) {
+          errEl.textContent = err.message;
+          errEl.classList.remove('d-none');
+          saveBtn.disabled = false;
+          spinner.classList.add('d-none');
+        }
       });
   }
 
@@ -402,19 +451,24 @@ export function afterRender({ root }) {
       return;
     }
 
-    tbody.innerHTML = data.map((p) => `<tr>
-      <td class="fw-semibold">${escapeHtml(p.product_name)}</td>
-      <td>${escapeHtml(p.brand)}</td>
-      <td><span class="badge bg-light text-dark border">${escapeHtml(p.category)}</span></td>
-      <td>${p.stock_quantity}</td>
-      <td>${p.is_active ? '<span class="badge bg-success">✓</span>' : '<span class="badge bg-secondary">✗</span>'}</td>
-      <td class="text-end">
-        <div class="btn-group btn-group-sm">
-          <button class="btn btn-outline-primary" data-action="edit-product" data-id="${p.id}">${t('customers.btn.edit')}</button>
-          <button class="btn btn-outline-danger" data-action="delete-product" data-id="${p.id}">${t('customers.btn.delete')}</button>
-        </div>
-      </td>
-    </tr>`).join('');
+    tbody.innerHTML = data.map((p) => {
+      const thumb = p.image_url
+        ? `<img src="${escapeHtml(p.image_url)}" class="rounded me-2" style="width:36px;height:36px;object-fit:cover">`
+        : `<span class="text-muted me-2">—</span>`;
+      return `<tr>
+        <td><div class="d-flex align-items-center">${thumb}<span class="fw-semibold">${escapeHtml(p.product_name)}</span></div></td>
+        <td>${escapeHtml(p.brand)}</td>
+        <td><span class="badge bg-light text-dark border">${escapeHtml(p.category)}</span></td>
+        <td>${p.stock_quantity}</td>
+        <td>${p.is_active ? '<span class="badge bg-success">✓</span>' : '<span class="badge bg-secondary">✗</span>'}</td>
+        <td class="text-end">
+          <div class="btn-group btn-group-sm">
+            <button class="btn btn-outline-primary" data-action="edit-product" data-id="${p.id}">${t('customers.btn.edit')}</button>
+            <button class="btn btn-outline-danger" data-action="delete-product" data-id="${p.id}">${t('customers.btn.delete')}</button>
+          </div>
+        </td>
+      </tr>`;
+    }).join('');
 
     tbody.querySelectorAll('[data-action="edit-product"]').forEach((btn) =>
       btn.addEventListener('click', () => openProductForm(btn.dataset.id, data.find((p) => p.id === btn.dataset.id))));
@@ -423,6 +477,9 @@ export function afterRender({ root }) {
   }
 
   function productFormBody(p = {}) {
+    const imgPreview = p.image_url
+      ? `<img src="${escapeHtml(p.image_url)}" class="rounded mb-2 d-block" style="max-height:80px;max-width:160px;object-fit:cover">`
+      : '';
     return `
       <div id="modal-error" class="alert alert-danger d-none"></div>
       <div class="row g-3">
@@ -438,6 +495,13 @@ export function afterRender({ root }) {
           <div class="form-check"><input id="pf-active" class="form-check-input" type="checkbox" ${(p.is_active ?? true) ? 'checked' : ''} />
           <label class="form-check-label" for="pf-active">${t('admin.col.active')}</label></div>
         </div>
+        <div class="col-12">
+          <label class="form-label">${t('admin.col.image')}</label>
+          <input type="hidden" id="pf-image-url" value="${escapeHtml(p.image_url ?? '')}" />
+          ${imgPreview}
+          <input id="pf-image" type="file" class="form-control form-control-sm" accept="${ACCEPTED_TYPES}" />
+          ${p.image_url ? `<button type="button" class="btn btn-sm btn-outline-danger mt-1" id="pf-clear-img">${t('admin.file.remove')}</button>` : ''}
+        </div>
       </div>`;
   }
 
@@ -448,19 +512,50 @@ export function afterRender({ root }) {
     const brand = modalBody.querySelector('#pf-brand').value.trim();
     const stock = parseInt(modalBody.querySelector('#pf-stock').value, 10);
     const active = modalBody.querySelector('#pf-active').checked;
+    const imageFile = modalBody.querySelector('#pf-image')?.files[0];
+    const imageUrlInput = modalBody.querySelector('#pf-image-url');
 
     if (!name || !cat || !brand || isNaN(stock)) {
       errEl.textContent = t('auth.error.requiredFields'); errEl.classList.remove('d-none'); return;
     }
-    const payload = { category: cat, product_name: name, brand, stock_quantity: stock, is_active: active };
-    const { error } = id
-      ? await supabase.from('products').update(payload).eq('id', id)
-      : await supabase.from('products').insert(payload);
-    if (error) { errEl.textContent = error.message; errEl.classList.remove('d-none'); return; }
-    bsModal.hide();
-    showAlert(t('admin.saved'));
-    panes.products = false;
-    loadProducts();
+
+    const saveBtn = modalFooter.querySelector('#modal-save');
+    saveBtn.disabled = true;
+    errEl.classList.add('d-none');
+
+    try {
+      let imageUrl = imageUrlInput?.value || null;
+
+      const payload = { category: cat, product_name: name, brand, stock_quantity: stock, is_active: active, image_url: imageUrl };
+
+      let savedId = id;
+      if (id) {
+        const { error } = await supabase.from('products').update(payload).eq('id', id);
+        if (error) throw error;
+      } else {
+        const { data, error } = await supabase.from('products').insert(payload).select('id').single();
+        if (error) throw error;
+        savedId = data.id;
+      }
+
+      // Upload image after we have the product ID
+      if (imageFile) {
+        const path = productImagePath(savedId, imageFile.name);
+        await uploadFile(BUCKETS.PRODUCTS, path, imageFile);
+        imageUrl = getPublicUrl(BUCKETS.PRODUCTS, path);
+        await supabase.from('products').update({ image_url: imageUrl }).eq('id', savedId);
+      }
+
+      bsModal.hide();
+      showAlert(t('admin.saved'));
+      panes.products = false;
+      loadProducts();
+    } catch (err) {
+      errEl.textContent = err.message;
+      errEl.classList.remove('d-none');
+    } finally {
+      saveBtn.disabled = false;
+    }
   }
 
   function openProductForm(id = null, p = {}) {
@@ -469,6 +564,13 @@ export function afterRender({ root }) {
       `<button class="btn btn-secondary" data-bs-dismiss="modal">${t('modal.close')}</button>
        <button id="modal-save" class="btn btn-primary">${t('customers.edit.save')}</button>`,
       () => saveProduct(id));
+
+    // Wire remove-image button
+    modalBody.querySelector('#pf-clear-img')?.addEventListener('click', () => {
+      modalBody.querySelector('#pf-image-url').value = '';
+      modalBody.querySelector('#pf-clear-img')?.remove();
+      modalBody.querySelector('img')?.remove();
+    });
   }
 
   async function deleteProduct(id) {
@@ -491,7 +593,7 @@ export function afterRender({ root }) {
 
     const { data, error } = await supabase
       .from('bookings')
-      .select('id, customer_display_name, booking_date, booking_time, status, services(service_name)')
+      .select('id, user_id, customer_display_name, booking_date, booking_time, status, services(service_name)')
       .order('booking_date', { ascending: false })
       .limit(100);
 
@@ -511,11 +613,12 @@ export function afterRender({ root }) {
       <td>${escapeHtml(b.services?.service_name ?? '—')}</td>
       <td class="text-muted small">${b.booking_date} ${String(b.booking_time).slice(0, 5)}</td>
       <td><span class="badge bg-${STATUS_COLORS[b.status] ?? 'secondary'}">${b.status}</span></td>
-      <td class="text-end">
-        <select class="form-select form-select-sm w-auto d-inline-block" data-action="update-status" data-id="${b.id}">
+      <td class="text-end d-flex gap-1 justify-content-end">
+        <select class="form-select form-select-sm w-auto" data-action="update-status" data-id="${b.id}">
           ${['pending','confirmed','cancelled','completed'].map((s) =>
             `<option value="${s}" ${s === b.status ? 'selected' : ''}>${s}</option>`).join('')}
         </select>
+        <button class="btn btn-sm btn-outline-secondary" data-action="booking-files" data-id="${b.id}" data-user-id="${b.user_id}" title="${t('admin.file.files')}">📎</button>
       </td>
     </tr>`).join('');
 
@@ -525,6 +628,93 @@ export function afterRender({ root }) {
         if (error) showAlert(error.message, 'danger');
         else showAlert(t('admin.saved'));
       });
+    });
+
+    tbody.querySelectorAll('[data-action="booking-files"]').forEach((btn) => {
+      btn.addEventListener('click', () => openBookingFilesModal(btn.dataset.id, btn.dataset.userId));
+    });
+  }
+
+  async function openBookingFilesModal(bookingId, userId) {
+    modalTitle.textContent = `${t('admin.file.files')} — #${bookingId.slice(0, 8)}`;
+    modalBody.innerHTML = `<div class="text-center py-3"><div class="spinner-border spinner-border-sm"></div></div>`;
+    modalFooter.innerHTML = `
+      <label class="btn btn-sm btn-outline-primary mb-0">
+        ${t('admin.file.upload')}
+        <input type="file" id="booking-file-input" class="d-none" accept="${ACCEPTED_TYPES}" multiple />
+      </label>
+      <button class="btn btn-secondary" data-bs-dismiss="modal">${t('modal.close')}</button>`;
+    bsModal.show();
+
+    const renderFiles = async () => {
+      try {
+        const files = await listFiles(BUCKETS.BOOKINGS, `${userId}/${bookingId}`);
+        if (!files.length) {
+          modalBody.innerHTML = `<p class="text-muted text-center py-3">${t('admin.file.noFiles')}</p>`;
+          return;
+        }
+        modalBody.innerHTML = `<ul class="list-group list-group-flush">
+          ${files.map((f) => `
+            <li class="list-group-item d-flex justify-content-between align-items-center gap-2 px-0">
+              <div class="d-flex align-items-center gap-2 text-truncate">
+                ${isImage(f.name) ? `<img src="" data-path="${userId}/${bookingId}/${f.name}" class="booking-file-thumb rounded" style="width:36px;height:36px;object-fit:cover">` : '📄'}
+                <span class="text-truncate small">${escapeHtml(f.name)}</span>
+                <small class="text-muted">${formatBytes(f.metadata?.size)}</small>
+              </div>
+              <div class="d-flex gap-1 flex-shrink-0">
+                <button class="btn btn-sm btn-outline-primary" data-file-download="${f.name}">${t('admin.file.download')}</button>
+                <button class="btn btn-sm btn-outline-danger" data-file-delete="${f.name}">${t('customers.btn.delete')}</button>
+              </div>
+            </li>`).join('')}
+        </ul>`;
+
+        // Load signed URLs for image thumbnails
+        modalBody.querySelectorAll('[data-path]').forEach(async (img) => {
+          try {
+            img.src = await getSignedUrl(BUCKETS.BOOKINGS, img.dataset.path, 300);
+          } catch { /* ignore */ }
+        });
+
+        // Download buttons
+        modalBody.querySelectorAll('[data-file-download]').forEach((btn) => {
+          btn.addEventListener('click', async () => {
+            const path = `${userId}/${bookingId}/${btn.dataset.fileDownload}`;
+            try {
+              const blob = await downloadFile(BUCKETS.BOOKINGS, path);
+              triggerDownload(blob, btn.dataset.fileDownload);
+            } catch (err) { showAlert(err.message, 'danger'); }
+          });
+        });
+
+        // Delete buttons
+        modalBody.querySelectorAll('[data-file-delete]').forEach((btn) => {
+          btn.addEventListener('click', async () => {
+            if (!confirm(t('admin.file.deleteConfirm'))) return;
+            const path = `${userId}/${bookingId}/${btn.dataset.fileDelete}`;
+            try {
+              await removeFiles(BUCKETS.BOOKINGS, [path]);
+              await renderFiles();
+            } catch (err) { showAlert(err.message, 'danger'); }
+          });
+        });
+      } catch (err) {
+        modalBody.innerHTML = `<div class="alert alert-danger">${escapeHtml(err.message)}</div>`;
+      }
+    };
+
+    await renderFiles();
+
+    // Upload new files
+    modalFooter.querySelector('#booking-file-input').addEventListener('change', async (e) => {
+      const filesToUpload = Array.from(e.target.files);
+      for (const file of filesToUpload) {
+        try {
+          const path = bookingFilePath(userId, bookingId, file.name);
+          await uploadFile(BUCKETS.BOOKINGS, path, file);
+        } catch (err) { showAlert(err.message, 'danger'); }
+      }
+      await renderFiles();
+      e.target.value = '';
     });
   }
 
