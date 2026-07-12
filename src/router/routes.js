@@ -5,8 +5,9 @@
   { path: '/calendar', titleKey: 'nav.calendar', requiredRoles: ['staff', 'admin'], load: () => import('../pages/calendar/calendar.js') },
   { path: '/customers', titleKey: 'nav.customers', requiredRoles: ['staff', 'admin'], load: () => import('../pages/customers/customers.js') },
   { path: '/quiz', titleKey: 'nav.quiz', requiredRoles: null, load: () => import('../pages/quiz/quiz.js') },
-  { path: '/login', titleKey: 'nav.login', requiredRoles: null, load: () => import('../pages/auth/login.js') },
-  { path: '/register', titleKey: 'nav.register', requiredRoles: null, load: () => import('../pages/auth/register.js') }
+  { path: '/login',    titleKey: 'nav.login',    requiredRoles: null,        load: () => import('../pages/auth/login.js') },
+  { path: '/register', titleKey: 'nav.register', requiredRoles: null,        load: () => import('../pages/auth/register.js') },
+  { path: '/admin',    titleKey: 'nav.admin',    requiredRoles: ['admin'],    load: () => import('../pages/admin/admin.js') }
 ];
 
 const ROUTE_LOOKUP = new Map();

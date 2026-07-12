@@ -1,0 +1,20 @@
+.admin-search {
+  max-width: 260px;
+}
+
+.admin-page .nav-tabs .nav-link {
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+.admin-page .table th {
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.admin-role-badge {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}

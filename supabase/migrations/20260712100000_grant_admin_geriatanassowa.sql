@@ -1,0 +1,29 @@
+-- Grant admin role to geriatanassowa@gmail.com
+-- Safe to re-run: ON CONFLICT DO NOTHING
+do $$
+declare
+  v_user_id uuid;
+begin
+  select id into v_user_id
+  from auth.users
+  where email = 'geriatanassowa@gmail.com';
+
+  if v_user_id is null then
+    raise notice 'User geriatanassowa@gmail.com not found in auth.users — skipping.';
+    return;
+  end if;
+
+  -- Ensure profile row exists (in case trigger missed it)
+  insert into public.profiles (id, full_name)
+  select v_user_id, raw_user_meta_data ->> 'full_name'
+  from auth.users
+  where id = v_user_id
+  on conflict (id) do nothing;
+
+  -- Remove any existing roles and set admin
+  delete from public.user_roles where user_id = v_user_id;
+  insert into public.user_roles (user_id, role) values (v_user_id, 'admin');
+
+  raise notice 'Admin role granted to geriatanassowa@gmail.com (%).', v_user_id;
+end;
+$$;

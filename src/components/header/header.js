@@ -3,10 +3,15 @@ import './header.css';
 import { normalizePath } from '../../router/routes.js';
 import { getLocale } from '../../services/i18n.js';
 import { signOut } from '../../services/auth.js';
+import { hasRole } from '../../services/session.js';
 
 export function renderHeader(currentPath, locale, user) {
+  const adminBtn = user && hasRole('admin')
+    ? `<a href="/admin" data-nav-link data-route="/admin" class="btn btn-sm btn-warning fw-semibold">Admin</a>`
+    : '';
   const authSlot = user
     ? `<span class="text-white-50 small d-none d-md-inline">${escapeHtml(user.email)}</span>
+       ${adminBtn}
        <button id="header-logout" class="btn btn-sm btn-outline-danger">Logout</button>`
     : `<a href="/login" data-nav-link data-route="/login" class="nav-pill btn btn-sm btn-outline-light">Login</a>
        <a href="/register" data-nav-link data-route="/register" class="nav-pill btn btn-sm btn-outline-light">Register</a>`;

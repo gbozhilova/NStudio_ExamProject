@@ -1,0 +1,422 @@
+import template from './admin.html?raw';
+import './admin.css';
+import { Modal } from 'bootstrap';
+import { supabase } from '../../services/supabase.js';
+import { translateRoot, t } from '../../services/i18n.js';
+
+export function render() {
+  return template;
+}
+
+export function afterRender({ root }) {
+  translateRoot(root);
+
+  const alertEl = root.querySelector('#admin-alert');
+  const modalEl = root.querySelector('#admin-modal');
+  const modalTitle = root.querySelector('#admin-modal-title');
+  const modalBody = root.querySelector('#admin-modal-body');
+  const modalFooter = root.querySelector('#admin-modal-footer');
+  const bsModal = new Modal(modalEl);
+
+  // ── Helpers ──────────────────────────────────────────────────────────────
+
+  function showAlert(message, type = 'success') {
+    alertEl.textContent = message;
+    alertEl.className = `alert alert-${type}`;
+    setTimeout(() => alertEl.classList.add('d-none'), 4000);
+  }
+
+  function escapeHtml(str) {
+    return String(str ?? '')
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+  }
+
+  function fmt(date) {
+    return date ? new Date(date).toLocaleDateString() : '—';
+  }
+
+  function openModal(title, bodyHtml, footerHtml, onSave) {
+    modalTitle.textContent = title;
+    modalBody.innerHTML = bodyHtml;
+    modalFooter.innerHTML = footerHtml;
+    if (onSave) {
+      modalFooter.querySelector('#modal-save')?.addEventListener('click', onSave);
+    }
+    bsModal.show();
+  }
+
+  function roleBadge(role) {
+    const colors = { admin: 'danger', staff: 'warning text-dark', customer: 'secondary' };
+    return `<span class="badge admin-role-badge bg-${colors[role] ?? 'secondary'}">${escapeHtml(role)}</span>`;
+  }
+
+  // ── Tab switching ─────────────────────────────────────────────────────────
+
+  const panes = { users: false, services: false, products: false, bookings: false };
+
+  function activateTab(tabName) {
+    root.querySelectorAll('[data-admin-tab]').forEach((btn) => {
+      btn.classList.toggle('active', btn.dataset.adminTab === tabName);
+    });
+    root.querySelectorAll('.admin-pane').forEach((pane) => pane.classList.add('d-none'));
+    root.querySelector(`#admin-pane-${tabName}`).classList.remove('d-none');
+
+    if (!panes[tabName]) {
+      panes[tabName] = true;
+      LOADERS[tabName]();
+    }
+  }
+
+  root.querySelectorAll('[data-admin-tab]').forEach((btn) => {
+    btn.addEventListener('click', () => activateTab(btn.dataset.adminTab));
+  });
+
+  // ── USERS tab ─────────────────────────────────────────────────────────────
+
+  async function loadUsers(search = '') {
+    const loadEl = root.querySelector('#admin-users-loading');
+    const tableEl = root.querySelector('#admin-users-table');
+    loadEl.classList.remove('d-none');
+    tableEl.classList.add('d-none');
+
+    let query = supabase
+      .from('profiles')
+      .select('id, full_name, phone, created_at, user_roles(role)', { count: 'exact' })
+      .order('full_name');
+
+    if (search.trim()) query = query.ilike('full_name', `%${search.trim()}%`);
+
+    const { data, error } = await query;
+    loadEl.classList.add('d-none');
+    tableEl.classList.remove('d-none');
+
+    if (error) { showAlert(error.message, 'danger'); return; }
+
+    const tbody = root.querySelector('#admin-users-tbody');
+    if (!data.length) {
+      tbody.innerHTML = `<tr><td colspan="5" class="text-center text-muted py-4">${t('customers.empty')}</td></tr>`;
+      return;
+    }
+
+    tbody.innerHTML = data.map((u) => {
+      const roles = (u.user_roles ?? []).map((r) => roleBadge(r.role)).join(' ');
+      return `<tr>
+        <td class="fw-semibold">${escapeHtml(u.full_name ?? '—')}</td>
+        <td>${roles || roleBadge('—')}</td>
+        <td>${escapeHtml(u.phone ?? '—')}</td>
+        <td class="text-muted small">${fmt(u.created_at)}</td>
+        <td class="text-end">
+          <div class="btn-group btn-group-sm">
+            <button class="btn btn-outline-primary" data-action="edit-user" data-id="${u.id}">${t('customers.btn.edit')}</button>
+            <button class="btn btn-outline-danger" data-action="delete-user" data-id="${u.id}">${t('customers.btn.delete')}</button>
+          </div>
+        </td>
+      </tr>`;
+    }).join('');
+
+    tbody.querySelectorAll('[data-action="edit-user"]').forEach((btn) =>
+      btn.addEventListener('click', () => openEditUser(btn.dataset.id, data.find((u) => u.id === btn.dataset.id))));
+    tbody.querySelectorAll('[data-action="delete-user"]').forEach((btn) =>
+      btn.addEventListener('click', () => deleteUser(btn.dataset.id)));
+  }
+
+  function openEditUser(userId, user) {
+    const body = `
+      <div id="modal-error" class="alert alert-danger d-none"></div>
+      <div class="mb-3"><label class="form-label">${t('auth.register.name')}</label>
+        <input id="eu-name" class="form-control" value="${escapeHtml(user.full_name ?? '')}" /></div>
+      <div class="mb-3"><label class="form-label">${t('customers.col.phone')}</label>
+        <input id="eu-phone" class="form-control" value="${escapeHtml(user.phone ?? '')}" /></div>
+      <div class="mb-3"><label class="form-label">${t('admin.col.role')}</label>
+        <select id="eu-role" class="form-select">
+          <option value="customer" ${(user.user_roles?.[0]?.role ?? 'customer') === 'customer' ? 'selected' : ''}>customer</option>
+          <option value="staff" ${(user.user_roles?.[0]?.role) === 'staff' ? 'selected' : ''}>staff</option>
+          <option value="admin" ${(user.user_roles?.[0]?.role) === 'admin' ? 'selected' : ''}>admin</option>
+        </select></div>`;
+
+    openModal(t('customers.edit.heading'), body,
+      `<button class="btn btn-secondary" data-bs-dismiss="modal">${t('modal.close')}</button>
+       <button id="modal-save" class="btn btn-primary">${t('customers.edit.save')}</button>`,
+      async () => {
+        const errEl = modalBody.querySelector('#modal-error');
+        const name = modalBody.querySelector('#eu-name').value.trim();
+        const phone = modalBody.querySelector('#eu-phone').value.trim();
+        const role = modalBody.querySelector('#eu-role').value;
+        if (!name) { errEl.textContent = t('auth.error.requiredFields'); errEl.classList.remove('d-none'); return; }
+        try {
+          await supabase.from('profiles').update({ full_name: name, phone: phone || null, updated_at: new Date().toISOString() }).eq('id', userId);
+          // update role: delete old, insert new
+          await supabase.from('user_roles').delete().eq('user_id', userId);
+          await supabase.from('user_roles').insert({ user_id: userId, role });
+          bsModal.hide();
+          showAlert(t('customers.edit.success'));
+          panes.users = false;
+          loadUsers();
+        } catch (err) { errEl.textContent = err.message; errEl.classList.remove('d-none'); }
+      });
+  }
+
+  async function deleteUser(userId) {
+    if (!confirm(t('customers.delete.confirm'))) return;
+    const { error } = await supabase.from('profiles').delete().eq('id', userId);
+    if (error) { showAlert(error.message, 'danger'); return; }
+    showAlert(t('customers.delete.success'));
+    panes.users = false;
+    loadUsers();
+  }
+
+  let userSearchTimer = null;
+  root.querySelector('#admin-user-search').addEventListener('input', (e) => {
+    clearTimeout(userSearchTimer);
+    userSearchTimer = setTimeout(() => { panes.users = false; loadUsers(e.target.value); }, 300);
+  });
+
+  // ── SERVICES tab ──────────────────────────────────────────────────────────
+
+  async function loadServices() {
+    const loadEl = root.querySelector('#admin-services-loading');
+    const tableEl = root.querySelector('#admin-services-table');
+    loadEl.classList.remove('d-none'); tableEl.classList.add('d-none');
+
+    const { data, error } = await supabase.from('services').select('*').order('category').order('service_name');
+    loadEl.classList.add('d-none'); tableEl.classList.remove('d-none');
+    if (error) { showAlert(error.message, 'danger'); return; }
+
+    const tbody = root.querySelector('#admin-services-tbody');
+    if (!data.length) {
+      tbody.innerHTML = `<tr><td colspan="6" class="text-center text-muted py-4">${t('admin.empty')}</td></tr>`;
+      return;
+    }
+
+    tbody.innerHTML = data.map((s) => `<tr>
+      <td class="fw-semibold">${escapeHtml(s.service_name)}</td>
+      <td><span class="badge bg-light text-dark border">${escapeHtml(s.category)}</span></td>
+      <td>${s.service_duration_minutes} min</td>
+      <td>€${Number(s.price).toFixed(2)}</td>
+      <td>${s.is_active ? '<span class="badge bg-success">✓</span>' : '<span class="badge bg-secondary">✗</span>'}</td>
+      <td class="text-end">
+        <div class="btn-group btn-group-sm">
+          <button class="btn btn-outline-primary" data-action="edit-service" data-id="${s.id}">${t('customers.btn.edit')}</button>
+          <button class="btn btn-outline-danger" data-action="delete-service" data-id="${s.id}">${t('customers.btn.delete')}</button>
+        </div>
+      </td>
+    </tr>`).join('');
+
+    tbody.querySelectorAll('[data-action="edit-service"]').forEach((btn) =>
+      btn.addEventListener('click', () => openServiceForm(btn.dataset.id, data.find((s) => s.id === btn.dataset.id))));
+    tbody.querySelectorAll('[data-action="delete-service"]').forEach((btn) =>
+      btn.addEventListener('click', () => deleteService(btn.dataset.id)));
+  }
+
+  function serviceFormBody(s = {}) {
+    return `
+      <div id="modal-error" class="alert alert-danger d-none"></div>
+      <div class="row g-3">
+        <div class="col-8"><label class="form-label">${t('admin.col.name')}</label>
+          <input id="sf-name" class="form-control" value="${escapeHtml(s.service_name ?? '')}" /></div>
+        <div class="col-4"><label class="form-label">${t('admin.col.category')}</label>
+          <input id="sf-cat" class="form-control" value="${escapeHtml(s.category ?? '')}" /></div>
+        <div class="col-12"><label class="form-label">Description</label>
+          <textarea id="sf-desc" class="form-control" rows="2">${escapeHtml(s.service_description ?? '')}</textarea></div>
+        <div class="col-4"><label class="form-label">${t('admin.col.duration')} (min)</label>
+          <input id="sf-dur" type="number" class="form-control" value="${s.service_duration_minutes ?? 30}" min="1" /></div>
+        <div class="col-4"><label class="form-label">${t('admin.col.price')} (€)</label>
+          <input id="sf-price" type="number" class="form-control" value="${s.price ?? ''}" step="0.01" min="0" /></div>
+        <div class="col-4 d-flex align-items-end pb-1">
+          <div class="form-check"><input id="sf-active" class="form-check-input" type="checkbox" ${(s.is_active ?? true) ? 'checked' : ''} />
+          <label class="form-check-label" for="sf-active">${t('admin.col.active')}</label></div>
+        </div>
+      </div>`;
+  }
+
+  async function saveService(id) {
+    const errEl = modalBody.querySelector('#modal-error');
+    const name = modalBody.querySelector('#sf-name').value.trim();
+    const cat = modalBody.querySelector('#sf-cat').value.trim();
+    const dur = parseInt(modalBody.querySelector('#sf-dur').value, 10);
+    const price = parseFloat(modalBody.querySelector('#sf-price').value);
+    const desc = modalBody.querySelector('#sf-desc').value.trim();
+    const active = modalBody.querySelector('#sf-active').checked;
+
+    if (!name || !cat || isNaN(dur) || isNaN(price)) {
+      errEl.textContent = t('auth.error.requiredFields'); errEl.classList.remove('d-none'); return;
+    }
+    const payload = { category: cat, service_name: name, service_description: desc || null, service_duration_minutes: dur, price, is_active: active };
+    const { error } = id
+      ? await supabase.from('services').update(payload).eq('id', id)
+      : await supabase.from('services').insert(payload);
+    if (error) { errEl.textContent = error.message; errEl.classList.remove('d-none'); return; }
+    bsModal.hide();
+    showAlert(t('admin.saved'));
+    panes.services = false;
+    loadServices();
+  }
+
+  function openServiceForm(id = null, s = {}) {
+    const title = id ? `${t('customers.btn.edit')} — ${s.service_name}` : t('admin.btn.add');
+    openModal(title, serviceFormBody(s),
+      `<button class="btn btn-secondary" data-bs-dismiss="modal">${t('modal.close')}</button>
+       <button id="modal-save" class="btn btn-primary">${t('customers.edit.save')}</button>`,
+      () => saveService(id));
+  }
+
+  async function deleteService(id) {
+    if (!confirm(t('admin.delete.confirm'))) return;
+    const { error } = await supabase.from('services').delete().eq('id', id);
+    if (error) { showAlert(error.message, 'danger'); return; }
+    showAlert(t('admin.deleted'));
+    panes.services = false;
+    loadServices();
+  }
+
+  root.querySelector('#admin-service-add').addEventListener('click', () => openServiceForm());
+
+  // ── PRODUCTS tab ──────────────────────────────────────────────────────────
+
+  async function loadProducts() {
+    const loadEl = root.querySelector('#admin-products-loading');
+    const tableEl = root.querySelector('#admin-products-table');
+    loadEl.classList.remove('d-none'); tableEl.classList.add('d-none');
+
+    const { data, error } = await supabase.from('products').select('*').order('category').order('product_name');
+    loadEl.classList.add('d-none'); tableEl.classList.remove('d-none');
+    if (error) { showAlert(error.message, 'danger'); return; }
+
+    const tbody = root.querySelector('#admin-products-tbody');
+    if (!data.length) {
+      tbody.innerHTML = `<tr><td colspan="6" class="text-center text-muted py-4">${t('admin.empty')}</td></tr>`;
+      return;
+    }
+
+    tbody.innerHTML = data.map((p) => `<tr>
+      <td class="fw-semibold">${escapeHtml(p.product_name)}</td>
+      <td>${escapeHtml(p.brand)}</td>
+      <td><span class="badge bg-light text-dark border">${escapeHtml(p.category)}</span></td>
+      <td>${p.stock_quantity}</td>
+      <td>${p.is_active ? '<span class="badge bg-success">✓</span>' : '<span class="badge bg-secondary">✗</span>'}</td>
+      <td class="text-end">
+        <div class="btn-group btn-group-sm">
+          <button class="btn btn-outline-primary" data-action="edit-product" data-id="${p.id}">${t('customers.btn.edit')}</button>
+          <button class="btn btn-outline-danger" data-action="delete-product" data-id="${p.id}">${t('customers.btn.delete')}</button>
+        </div>
+      </td>
+    </tr>`).join('');
+
+    tbody.querySelectorAll('[data-action="edit-product"]').forEach((btn) =>
+      btn.addEventListener('click', () => openProductForm(btn.dataset.id, data.find((p) => p.id === btn.dataset.id))));
+    tbody.querySelectorAll('[data-action="delete-product"]').forEach((btn) =>
+      btn.addEventListener('click', () => deleteProduct(btn.dataset.id)));
+  }
+
+  function productFormBody(p = {}) {
+    return `
+      <div id="modal-error" class="alert alert-danger d-none"></div>
+      <div class="row g-3">
+        <div class="col-8"><label class="form-label">${t('admin.col.name')}</label>
+          <input id="pf-name" class="form-control" value="${escapeHtml(p.product_name ?? '')}" /></div>
+        <div class="col-4"><label class="form-label">${t('admin.col.category')}</label>
+          <input id="pf-cat" class="form-control" value="${escapeHtml(p.category ?? '')}" /></div>
+        <div class="col-6"><label class="form-label">${t('admin.col.brand')}</label>
+          <input id="pf-brand" class="form-control" value="${escapeHtml(p.brand ?? '')}" /></div>
+        <div class="col-3"><label class="form-label">${t('admin.col.stock')}</label>
+          <input id="pf-stock" type="number" class="form-control" value="${p.stock_quantity ?? 0}" min="0" /></div>
+        <div class="col-3 d-flex align-items-end pb-1">
+          <div class="form-check"><input id="pf-active" class="form-check-input" type="checkbox" ${(p.is_active ?? true) ? 'checked' : ''} />
+          <label class="form-check-label" for="pf-active">${t('admin.col.active')}</label></div>
+        </div>
+      </div>`;
+  }
+
+  async function saveProduct(id) {
+    const errEl = modalBody.querySelector('#modal-error');
+    const name = modalBody.querySelector('#pf-name').value.trim();
+    const cat = modalBody.querySelector('#pf-cat').value.trim();
+    const brand = modalBody.querySelector('#pf-brand').value.trim();
+    const stock = parseInt(modalBody.querySelector('#pf-stock').value, 10);
+    const active = modalBody.querySelector('#pf-active').checked;
+
+    if (!name || !cat || !brand || isNaN(stock)) {
+      errEl.textContent = t('auth.error.requiredFields'); errEl.classList.remove('d-none'); return;
+    }
+    const payload = { category: cat, product_name: name, brand, stock_quantity: stock, is_active: active };
+    const { error } = id
+      ? await supabase.from('products').update(payload).eq('id', id)
+      : await supabase.from('products').insert(payload);
+    if (error) { errEl.textContent = error.message; errEl.classList.remove('d-none'); return; }
+    bsModal.hide();
+    showAlert(t('admin.saved'));
+    panes.products = false;
+    loadProducts();
+  }
+
+  function openProductForm(id = null, p = {}) {
+    const title = id ? `${t('customers.btn.edit')} — ${p.product_name}` : t('admin.btn.add');
+    openModal(title, productFormBody(p),
+      `<button class="btn btn-secondary" data-bs-dismiss="modal">${t('modal.close')}</button>
+       <button id="modal-save" class="btn btn-primary">${t('customers.edit.save')}</button>`,
+      () => saveProduct(id));
+  }
+
+  async function deleteProduct(id) {
+    if (!confirm(t('admin.delete.confirm'))) return;
+    const { error } = await supabase.from('products').delete().eq('id', id);
+    if (error) { showAlert(error.message, 'danger'); return; }
+    showAlert(t('admin.deleted'));
+    panes.products = false;
+    loadProducts();
+  }
+
+  root.querySelector('#admin-product-add').addEventListener('click', () => openProductForm());
+
+  // ── BOOKINGS tab ──────────────────────────────────────────────────────────
+
+  async function loadBookings() {
+    const loadEl = root.querySelector('#admin-bookings-loading');
+    const tableEl = root.querySelector('#admin-bookings-table');
+    loadEl.classList.remove('d-none'); tableEl.classList.add('d-none');
+
+    const { data, error } = await supabase
+      .from('bookings')
+      .select('id, customer_display_name, booking_date, booking_time, status, services(service_name)')
+      .order('booking_date', { ascending: false })
+      .limit(100);
+
+    loadEl.classList.add('d-none'); tableEl.classList.remove('d-none');
+    if (error) { showAlert(error.message, 'danger'); return; }
+
+    const tbody = root.querySelector('#admin-bookings-tbody');
+    const STATUS_COLORS = { pending: 'warning text-dark', confirmed: 'success', cancelled: 'secondary', completed: 'primary' };
+
+    if (!data.length) {
+      tbody.innerHTML = `<tr><td colspan="5" class="text-center text-muted py-4">${t('admin.empty')}</td></tr>`;
+      return;
+    }
+
+    tbody.innerHTML = data.map((b) => `<tr>
+      <td class="fw-semibold">${escapeHtml(b.customer_display_name)}</td>
+      <td>${escapeHtml(b.services?.service_name ?? '—')}</td>
+      <td class="text-muted small">${b.booking_date} ${String(b.booking_time).slice(0, 5)}</td>
+      <td><span class="badge bg-${STATUS_COLORS[b.status] ?? 'secondary'}">${b.status}</span></td>
+      <td class="text-end">
+        <select class="form-select form-select-sm w-auto d-inline-block" data-action="update-status" data-id="${b.id}">
+          ${['pending','confirmed','cancelled','completed'].map((s) =>
+            `<option value="${s}" ${s === b.status ? 'selected' : ''}>${s}</option>`).join('')}
+        </select>
+      </td>
+    </tr>`).join('');
+
+    tbody.querySelectorAll('[data-action="update-status"]').forEach((sel) => {
+      sel.addEventListener('change', async () => {
+        const { error } = await supabase.from('bookings').update({ status: sel.value }).eq('id', sel.dataset.id);
+        if (error) showAlert(error.message, 'danger');
+        else showAlert(t('admin.saved'));
+      });
+    });
+  }
+
+  // ── Loader map & initial tab ───────────────────────────────────────────────
+
+  const LOADERS = { users: loadUsers, services: loadServices, products: loadProducts, bookings: loadBookings };
+  activateTab('users');
+}

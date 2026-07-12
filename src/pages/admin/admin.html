@@ -1,0 +1,132 @@
+<div class="admin-page">
+  <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+    <h1 class="h2 fw-bold mb-0" data-i18n="admin.heading">Admin Panel</h1>
+  </div>
+
+  <div id="admin-alert" class="alert d-none" role="alert"></div>
+
+  <!-- Tab nav -->
+  <ul class="nav nav-tabs mb-4" id="admin-tabs" role="tablist">
+    <li class="nav-item" role="presentation">
+      <button class="nav-link active" data-admin-tab="users" type="button" data-i18n="admin.tab.users">Users</button>
+    </li>
+    <li class="nav-item" role="presentation">
+      <button class="nav-link" data-admin-tab="services" type="button" data-i18n="admin.tab.services">Services</button>
+    </li>
+    <li class="nav-item" role="presentation">
+      <button class="nav-link" data-admin-tab="products" type="button" data-i18n="admin.tab.products">Products</button>
+    </li>
+    <li class="nav-item" role="presentation">
+      <button class="nav-link" data-admin-tab="bookings" type="button" data-i18n="admin.tab.bookings">Bookings</button>
+    </li>
+  </ul>
+
+  <!-- Users -->
+  <div id="admin-pane-users" class="admin-pane">
+    <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+      <input id="admin-user-search" type="search" class="form-control form-control-sm admin-search" placeholder="Search…" />
+    </div>
+    <div id="admin-users-loading" class="text-center py-4"><div class="spinner-border text-primary"></div></div>
+    <div id="admin-users-table" class="d-none">
+      <div class="table-responsive">
+        <table class="table table-hover align-middle">
+          <thead class="table-light">
+            <tr>
+              <th data-i18n="customers.col.name">Name</th>
+              <th data-i18n="admin.col.role">Role</th>
+              <th data-i18n="customers.col.phone">Phone</th>
+              <th data-i18n="customers.col.created">Joined</th>
+              <th class="text-end" data-i18n="customers.col.actions">Actions</th>
+            </tr>
+          </thead>
+          <tbody id="admin-users-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Services -->
+  <div id="admin-pane-services" class="admin-pane d-none">
+    <div class="d-flex justify-content-end mb-3">
+      <button class="btn btn-sm btn-success" id="admin-service-add" data-i18n="admin.btn.add">+ Add</button>
+    </div>
+    <div id="admin-services-loading" class="text-center py-4"><div class="spinner-border text-primary"></div></div>
+    <div id="admin-services-table" class="d-none">
+      <div class="table-responsive">
+        <table class="table table-hover align-middle">
+          <thead class="table-light">
+            <tr>
+              <th data-i18n="admin.col.name">Name</th>
+              <th data-i18n="admin.col.category">Category</th>
+              <th data-i18n="admin.col.duration">Duration</th>
+              <th data-i18n="admin.col.price">Price</th>
+              <th data-i18n="admin.col.active">Active</th>
+              <th class="text-end" data-i18n="customers.col.actions">Actions</th>
+            </tr>
+          </thead>
+          <tbody id="admin-services-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Products -->
+  <div id="admin-pane-products" class="admin-pane d-none">
+    <div class="d-flex justify-content-end mb-3">
+      <button class="btn btn-sm btn-success" id="admin-product-add" data-i18n="admin.btn.add">+ Add</button>
+    </div>
+    <div id="admin-products-loading" class="text-center py-4"><div class="spinner-border text-primary"></div></div>
+    <div id="admin-products-table" class="d-none">
+      <div class="table-responsive">
+        <table class="table table-hover align-middle">
+          <thead class="table-light">
+            <tr>
+              <th data-i18n="admin.col.name">Name</th>
+              <th data-i18n="admin.col.brand">Brand</th>
+              <th data-i18n="admin.col.category">Category</th>
+              <th data-i18n="admin.col.stock">Stock</th>
+              <th data-i18n="admin.col.active">Active</th>
+              <th class="text-end" data-i18n="customers.col.actions">Actions</th>
+            </tr>
+          </thead>
+          <tbody id="admin-products-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bookings -->
+  <div id="admin-pane-bookings" class="admin-pane d-none">
+    <div id="admin-bookings-loading" class="text-center py-4"><div class="spinner-border text-primary"></div></div>
+    <div id="admin-bookings-table" class="d-none">
+      <div class="table-responsive">
+        <table class="table table-hover align-middle">
+          <thead class="table-light">
+            <tr>
+              <th data-i18n="admin.col.customer">Customer</th>
+              <th data-i18n="admin.col.service">Service</th>
+              <th data-i18n="admin.col.date">Date</th>
+              <th data-i18n="admin.col.status">Status</th>
+              <th class="text-end" data-i18n="customers.col.actions">Actions</th>
+            </tr>
+          </thead>
+          <tbody id="admin-bookings-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Shared modal -->
+  <div class="modal fade" id="admin-modal" tabindex="-1" aria-labelledby="admin-modal-title" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="admin-modal-title"></h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body" id="admin-modal-body"></div>
+        <div class="modal-footer" id="admin-modal-footer"></div>
+      </div>
+    </div>
+  </div>
+</div>
