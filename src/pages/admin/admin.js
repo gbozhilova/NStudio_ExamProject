@@ -3,11 +3,12 @@ import './admin.css';
 import { Modal } from 'bootstrap';
 import { supabase } from '../../services/supabase.js';
 import { translateRoot, t } from '../../services/i18n.js';
+import { fetchCategories, categoryImageUrl, categoryLabel, categorySlug } from '../../services/catalog.js';
 import {
   BUCKETS, ACCEPTED_TYPES,
   uploadFile, getPublicUrl, getSignedUrl, removeFiles, listFiles,
   downloadFile, triggerDownload,
-  productImagePath, avatarPath, bookingFilePath,
+  productImagePath, categoryImagePath, avatarPath, bookingFilePath,
   formatBytes, isImage
 } from '../../services/storage.js';
 
@@ -78,7 +79,11 @@ export function afterRender({ root }) {
 
   // ── Tab switching ─────────────────────────────────────────────────────────
 
-  const panes = { users: false, services: false, products: false, bookings: false, quiz: false };
+  const panes = { users: false, categories: false, services: false, products: false, bookings: false, quiz: false };
+
+  async function loadCategoryOptions(activeOnly = true) {
+    return fetchCategories({ activeOnly });
+  }
 
   function activateTab(tabName) {
     root.querySelectorAll('[data-admin-tab]').forEach((btn) => {
@@ -96,6 +101,164 @@ export function afterRender({ root }) {
   root.querySelectorAll('[data-admin-tab]').forEach((btn) => {
     btn.addEventListener('click', () => activateTab(btn.dataset.adminTab));
   });
+
+  // ── CATEGORIES tab ───────────────────────────────────────────────────────
+
+  async function loadCategories() {
+    const loadEl = root.querySelector('#admin-categories-loading');
+    const gridEl = root.querySelector('#admin-categories-grid');
+    loadEl.classList.remove('d-none');
+    gridEl.classList.add('d-none');
+
+    const [categories, services, products] = await Promise.all([
+      loadCategoryOptions(false),
+      supabase.from('services').select('category_id'),
+      supabase.from('products').select('category_id')
+    ]);
+
+    loadEl.classList.add('d-none');
+    gridEl.classList.remove('d-none');
+
+    const categoriesResult = categories ?? [];
+    const serviceCounts = new Map();
+    const productCounts = new Map();
+    for (const row of services?.data ?? []) {
+      if (!row.category_id) continue;
+      serviceCounts.set(row.category_id, (serviceCounts.get(row.category_id) ?? 0) + 1);
+    }
+    for (const row of products?.data ?? []) {
+      if (!row.category_id) continue;
+      productCounts.set(row.category_id, (productCounts.get(row.category_id) ?? 0) + 1);
+    }
+
+    if (!categoriesResult.length) {
+      gridEl.innerHTML = `<div class="col-12 text-center text-muted py-4">${t('admin.empty')}</div>`;
+      return;
+    }
+
+    gridEl.innerHTML = categoriesResult.map((category) => {
+      const image = categoryImageUrl(category);
+      const serviceCount = serviceCounts.get(category.id) ?? 0;
+      const productCount = productCounts.get(category.id) ?? 0;
+      return `
+        <div class="col-12 col-sm-6 col-lg-4 col-xxl-3">
+          <div class="card h-100 category-card">
+            <img src="${escapeHtml(image)}" class="card-img-top category-card-image" alt="${escapeHtml(category.name)}" />
+            <div class="card-body">
+              <div class="d-flex justify-content-between align-items-start gap-2 mb-2">
+                <div>
+                  <div class="small text-light-muted text-uppercase letter-spaced">${t('admin.categories.heading')}</div>
+                  <h3 class="h5 mb-1">${escapeHtml(categoryLabel(category.name))}</h3>
+                </div>
+                <span class="badge ${category.is_active ? 'bg-success' : 'bg-secondary'}">${category.is_active ? '✓' : '✗'}</span>
+              </div>
+              <p class="text-muted small mb-3">${serviceCount} services · ${productCount} products</p>
+              <div class="d-flex flex-wrap gap-2">
+                <button class="btn btn-sm btn-outline-primary" data-action="edit-category" data-id="${category.id}">${t('customers.btn.edit')}</button>
+              </div>
+            </div>
+          </div>
+        </div>`;
+    }).join('');
+
+    gridEl.querySelectorAll('[data-action="edit-category"]').forEach((btn) => {
+      btn.addEventListener('click', () => openCategoryForm(btn.dataset.id, categoriesResult.find((c) => c.id === btn.dataset.id)));
+    });
+  }
+
+  function categoryFormBody(category = {}) {
+    const uploadHint = category.image_url
+      ? `<div class="form-text">Current image: <a href="${escapeHtml(category.image_url)}" target="_blank" rel="noreferrer">open</a></div>`
+      : `<div class="form-text">Upload a category image or keep using a public image URL.</div>`;
+    const preview = category.image_url
+      ? `<img src="${escapeHtml(category.image_url)}" class="rounded-4 mb-3 d-block" style="width:100%;max-width:220px;height:160px;object-fit:cover">`
+      : `<div class="rounded-4 mb-3 d-flex align-items-center justify-content-center bg-light text-muted" style="width:100%;max-width:220px;height:160px;">${t('admin.col.image')}</div>`;
+    return `
+      <div id="modal-error" class="alert alert-danger d-none"></div>
+      <div class="row g-3">
+        <div class="col-12 col-lg-8"><label class="form-label">${t('admin.col.name')}</label>
+          <input id="cf-name" class="form-control" value="${escapeHtml(category.name ?? '')}" /></div>
+        <div class="col-12 col-lg-4"><label class="form-label">Slug</label>
+          <input id="cf-slug" class="form-control" value="${escapeHtml(category.slug ?? '')}" placeholder="auto-generated" /></div>
+        <div class="col-12"><label class="form-label">${t('admin.col.image')}</label>
+          <input id="cf-image" class="form-control" value="${escapeHtml(category.image_url ?? '')}" placeholder="/assets/HairCut.jpg or a public image URL" />
+          <input id="cf-image-file" type="file" class="form-control mt-2" accept="image/*" />
+          ${uploadHint}</div>
+        <div class="col-4"><label class="form-label">Sort order</label>
+          <input id="cf-sort" type="number" class="form-control" value="${category.sort_order ?? 0}" min="0" /></div>
+        <div class="col-4 d-flex align-items-end pb-1">
+          <div class="form-check"><input id="cf-active" class="form-check-input" type="checkbox" ${(category.is_active ?? true) ? 'checked' : ''} />
+          <label class="form-check-label" for="cf-active">${t('admin.col.active')}</label></div>
+        </div>
+        <div class="col-12">${preview}</div>
+      </div>`;
+  }
+
+  async function saveCategory(id) {
+    const errEl = modalBody.querySelector('#modal-error');
+    const name = modalBody.querySelector('#cf-name').value.trim();
+    const slugInput = modalBody.querySelector('#cf-slug').value.trim();
+    const imageUrl = modalBody.querySelector('#cf-image').value.trim();
+    const imageFile = modalBody.querySelector('#cf-image-file')?.files?.[0] ?? null;
+    const sortOrder = parseInt(modalBody.querySelector('#cf-sort').value, 10);
+    const active = modalBody.querySelector('#cf-active').checked;
+
+    if (!name) {
+      errEl.textContent = t('auth.error.requiredFields');
+      errEl.classList.remove('d-none');
+      return;
+    }
+
+    const payload = {
+      name,
+      slug: slugInput || categorySlug(name),
+      sort_order: Number.isNaN(sortOrder) ? 0 : sortOrder,
+      is_active: active
+    };
+
+    if (!imageFile && imageUrl) payload.image_url = imageUrl;
+    if (!imageFile && !imageUrl) payload.image_url = null;
+
+    const { data: savedRow, error } = id
+      ? await supabase.from('categories').update(payload).eq('id', id).select('id').single()
+      : await supabase.from('categories').insert(payload).select('id').single();
+
+    if (error) {
+      errEl.textContent = error.message;
+      errEl.classList.remove('d-none');
+      return;
+    }
+
+    const savedId = savedRow?.id ?? id;
+    if (imageFile && savedId) {
+      try {
+        const path = categoryImagePath(savedId, imageFile.name);
+        await uploadFile(BUCKETS.CATEGORIES, path, imageFile);
+        const uploadedUrl = getPublicUrl(BUCKETS.CATEGORIES, path);
+        const { error: imageError } = await supabase.from('categories').update({ image_url: uploadedUrl }).eq('id', savedId);
+        if (imageError) throw imageError;
+      } catch (uploadError) {
+        errEl.textContent = formatErrorMessage(uploadError);
+        errEl.classList.remove('d-none');
+        return;
+      }
+    }
+
+    bsModal.hide();
+    showAlert(t('admin.saved'));
+    panes.categories = false;
+    loadCategories();
+  }
+
+  function openCategoryForm(id = null, category = {}) {
+    const title = id ? `${t('customers.btn.edit')} — ${categoryLabel(category.name)}` : t('admin.categories.add');
+    openModal(title, categoryFormBody(category),
+      `<button class="btn btn-secondary" data-bs-dismiss="modal">${t('modal.close')}</button>
+       <button id="modal-save" class="btn btn-primary">${t('customers.edit.save')}</button>`,
+      () => saveCategory(id));
+  }
+
+  root.querySelector('#admin-category-add').addEventListener('click', () => openCategoryForm());
 
   // ── USERS tab ─────────────────────────────────────────────────────────────
 
@@ -443,7 +606,8 @@ export function afterRender({ root }) {
         <div class="col-8"><label class="form-label">${t('admin.col.name')}</label>
           <input id="sf-name" class="form-control" value="${escapeHtml(s.service_name ?? '')}" /></div>
         <div class="col-4"><label class="form-label">${t('admin.col.category')}</label>
-          <input id="sf-cat" class="form-control" value="${escapeHtml(s.category ?? '')}" /></div>
+          <select id="sf-cat" class="form-select"><option value="">${t('admin.categories.choose')}</option></select>
+          <div class="form-text">${t('admin.categories.useList')}</div></div>
         <div class="col-12"><label class="form-label">Description</label>
           <textarea id="sf-desc" class="form-control" rows="2">${escapeHtml(s.service_description ?? '')}</textarea></div>
         <div class="col-4"><label class="form-label">${t('admin.col.duration')} (min)</label>
@@ -457,19 +621,41 @@ export function afterRender({ root }) {
       </div>`;
   }
 
+  async function hydrateServiceCategorySelect(selectedCategoryId = null) {
+    const select = modalBody.querySelector('#sf-cat');
+    if (!select) return;
+    try {
+      const categories = await loadCategoryOptions(true);
+      select.innerHTML = `<option value="">${t('admin.categories.choose')}</option>` + categories.map((category) => `<option value="${category.id}">${escapeHtml(categoryLabel(category.name))}</option>`).join('');
+      if (selectedCategoryId) select.value = selectedCategoryId;
+    } catch {
+      select.innerHTML = `<option value="">${t('admin.categories.choose')}</option>`;
+    }
+  }
+
   async function saveService(id) {
     const errEl = modalBody.querySelector('#modal-error');
     const name = modalBody.querySelector('#sf-name').value.trim();
-    const cat = modalBody.querySelector('#sf-cat').value.trim();
+    const catId = modalBody.querySelector('#sf-cat').value.trim();
     const dur = parseInt(modalBody.querySelector('#sf-dur').value, 10);
     const price = parseFloat(modalBody.querySelector('#sf-price').value);
     const desc = modalBody.querySelector('#sf-desc').value.trim();
     const active = modalBody.querySelector('#sf-active').checked;
+    const categories = await loadCategoryOptions(true);
+    const selectedCategory = categories.find((category) => category.id === catId);
 
-    if (!name || !cat || isNaN(dur) || isNaN(price)) {
+    if (!name || !selectedCategory || isNaN(dur) || isNaN(price)) {
       errEl.textContent = t('auth.error.requiredFields'); errEl.classList.remove('d-none'); return;
     }
-    const payload = { category: cat, service_name: name, service_description: desc || null, service_duration_minutes: dur, price, is_active: active };
+    const payload = {
+      category_id: selectedCategory.id,
+      category: selectedCategory.name,
+      service_name: name,
+      service_description: desc || null,
+      service_duration_minutes: dur,
+      price,
+      is_active: active
+    };
     const { error } = id
       ? await supabase.from('services').update(payload).eq('id', id)
       : await supabase.from('services').insert(payload);
@@ -480,12 +666,13 @@ export function afterRender({ root }) {
     loadServices();
   }
 
-  function openServiceForm(id = null, s = {}) {
+  async function openServiceForm(id = null, s = {}) {
     const title = id ? `${t('customers.btn.edit')} — ${s.service_name}` : t('admin.btn.add');
     openModal(title, serviceFormBody(s),
       `<button class="btn btn-secondary" data-bs-dismiss="modal">${t('modal.close')}</button>
        <button id="modal-save" class="btn btn-primary">${t('customers.edit.save')}</button>`,
       () => saveService(id));
+    hydrateServiceCategorySelect(s.category_id);
   }
 
   async function deleteService(id) {
@@ -551,7 +738,8 @@ export function afterRender({ root }) {
         <div class="col-8"><label class="form-label">${t('admin.col.name')}</label>
           <input id="pf-name" class="form-control" value="${escapeHtml(p.product_name ?? '')}" /></div>
         <div class="col-4"><label class="form-label">${t('admin.col.category')}</label>
-          <input id="pf-cat" class="form-control" value="${escapeHtml(p.category ?? '')}" /></div>
+          <select id="pf-cat" class="form-select"><option value="">${t('admin.categories.choose')}</option></select>
+          <div class="form-text">${t('admin.categories.useList')}</div></div>
         <div class="col-6"><label class="form-label">${t('admin.col.brand')}</label>
           <input id="pf-brand" class="form-control" value="${escapeHtml(p.brand ?? '')}" /></div>
         <div class="col-3"><label class="form-label">${t('admin.col.stock')}</label>
@@ -570,17 +758,31 @@ export function afterRender({ root }) {
       </div>`;
   }
 
+  async function hydrateProductCategorySelect(selectedCategoryId = null) {
+    const select = modalBody.querySelector('#pf-cat');
+    if (!select) return;
+    try {
+      const categories = await loadCategoryOptions(true);
+      select.innerHTML = `<option value="">${t('admin.categories.choose')}</option>` + categories.map((category) => `<option value="${category.id}">${escapeHtml(categoryLabel(category.name))}</option>`).join('');
+      if (selectedCategoryId) select.value = selectedCategoryId;
+    } catch {
+      select.innerHTML = `<option value="">${t('admin.categories.choose')}</option>`;
+    }
+  }
+
   async function saveProduct(id) {
     const errEl = modalBody.querySelector('#modal-error');
     const name = modalBody.querySelector('#pf-name').value.trim();
-    const cat = modalBody.querySelector('#pf-cat').value.trim();
+    const catId = modalBody.querySelector('#pf-cat').value.trim();
     const brand = modalBody.querySelector('#pf-brand').value.trim();
     const stock = parseInt(modalBody.querySelector('#pf-stock').value, 10);
     const active = modalBody.querySelector('#pf-active').checked;
     const imageFile = modalBody.querySelector('#pf-image')?.files[0];
     const imageUrlInput = modalBody.querySelector('#pf-image-url');
+    const categories = await loadCategoryOptions(true);
+    const selectedCategory = categories.find((category) => category.id === catId);
 
-    if (!name || !cat || !brand || isNaN(stock)) {
+    if (!name || !selectedCategory || !brand || isNaN(stock)) {
       errEl.textContent = t('auth.error.requiredFields'); errEl.classList.remove('d-none'); return;
     }
 
@@ -591,7 +793,15 @@ export function afterRender({ root }) {
     try {
       let imageUrl = imageUrlInput?.value || null;
 
-      const payload = { category: cat, product_name: name, brand, stock_quantity: stock, is_active: active, image_url: imageUrl };
+      const payload = {
+        category_id: selectedCategory.id,
+        category: selectedCategory.name,
+        product_name: name,
+        brand,
+        stock_quantity: stock,
+        is_active: active,
+        image_url: imageUrl
+      };
 
       let savedId = id;
       if (id) {
@@ -623,12 +833,13 @@ export function afterRender({ root }) {
     }
   }
 
-  function openProductForm(id = null, p = {}) {
+  async function openProductForm(id = null, p = {}) {
     const title = id ? `${t('customers.btn.edit')} — ${p.product_name}` : t('admin.btn.add');
     openModal(title, productFormBody(p),
       `<button class="btn btn-secondary" data-bs-dismiss="modal">${t('modal.close')}</button>
        <button id="modal-save" class="btn btn-primary">${t('customers.edit.save')}</button>`,
       () => saveProduct(id));
+    hydrateProductCategorySelect(p.category_id);
 
     // Wire remove-image button
     modalBody.querySelector('#pf-clear-img')?.addEventListener('click', () => {
@@ -893,6 +1104,6 @@ export function afterRender({ root }) {
 
   // ── Loader map & initial tab ───────────────────────────────────────────────
 
-  const LOADERS = { users: loadUsers, services: loadServices, products: loadProducts, bookings: loadBookings, quiz: loadQuiz };
+  const LOADERS = { users: loadUsers, categories: loadCategories, services: loadServices, products: loadProducts, bookings: loadBookings, quiz: loadQuiz };
   activateTab('users');
 }

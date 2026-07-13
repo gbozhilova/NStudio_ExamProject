@@ -4,6 +4,7 @@ import { supabase } from '../../services/supabase.js';
 import { translateRoot, t } from '../../services/i18n.js';
 import { isAuthenticated, getUser } from '../../services/session.js';
 import { navigate } from '../../app.js';
+import { fetchCategories, categoryImageUrl, categoryLabel } from '../../services/catalog.js';
 
 // Category icons map (Bootstrap Icons)
 const CAT_ICONS = {
@@ -21,7 +22,8 @@ export function afterRender({ root }) {
   // ── State ─────────────────────────────────────────────────────────────────
   const state = {
     step: 1,
-    category: null,
+    categoryId: null,
+    categoryName: null,
     service: null,
     staff: null,   // null = any available
     date: null,
@@ -93,7 +95,7 @@ export function afterRender({ root }) {
 
   function updateSummaryBar() {
     const parts = [];
-    if (state.category) parts.push(`<span class="summary-item">${escHtml(state.category)}</span>`);
+    if (state.categoryName) parts.push(`<span class="summary-item">${escHtml(state.categoryName)}</span>`);
     if (state.service) parts.push(`<span class="summary-item">${escHtml(state.service.service_name)} — €${Number(state.service.price).toFixed(2)}</span>`);
     if (state.staff) parts.push(`<span class="summary-item">${escHtml(state.staffName ?? 'Staff')}</span>`);
     else if (state.service) parts.push(`<span class="summary-item">Any available</span>`);
@@ -132,22 +134,28 @@ export function afterRender({ root }) {
 
   // ── STEP 1: Categories ────────────────────────────────────────────────────
   async function renderCategories() {
-    const { data, error } = await supabase
-      .from('services')
-      .select('category')
-      .eq('is_active', true);
+    const [{ data: categories, error: categoryError }, { data: services, error: serviceError }] = await Promise.all([
+      fetchCategories({ activeOnly: true }).then((rows) => ({ data: rows, error: null })).catch((err) => ({ data: null, error: err })),
+      supabase.from('services').select('category_id').eq('is_active', true)
+    ]);
 
-    if (error) { showAlert(error.message); return; }
+    if (categoryError) { showAlert(categoryError.message); return; }
+    if (serviceError) { showAlert(serviceError.message); return; }
 
-    const categories = [...new Set(data.map((s) => s.category))].sort();
+    const serviceCounts = new Map();
+    for (const row of services ?? []) {
+      if (!row.category_id) continue;
+      serviceCounts.set(row.category_id, (serviceCounts.get(row.category_id) ?? 0) + 1);
+    }
 
     stepEl.innerHTML = `
       <h2 class="h4 fw-bold mb-4">${t('booking.step1.heading')}</h2>
       <div class="booking-category-grid">
-        ${categories.map((cat) => `
-          <div class="booking-category-card ${state.category === cat ? 'selected' : ''}" data-cat="${escHtml(cat)}">
-            <span class="cat-icon">${CAT_ICONS[cat.toLowerCase()] ?? CAT_ICONS.default}</span>
-            <div class="cat-name">${escHtml(cat)}</div>
+        ${(categories ?? []).map((cat) => `
+          <div class="booking-category-card ${state.categoryId === cat.id ? 'selected' : ''}" data-cat-id="${escHtml(cat.id)}" data-cat-name="${escHtml(cat.name)}">
+            <img class="cat-thumb" src="${categoryImageUrl(cat)}" alt="${escHtml(cat.name)}" />
+            <div class="cat-name">${escHtml(categoryLabel(cat.name))}</div>
+            <div class="cat-count small text-muted">${serviceCounts.get(cat.id) ?? 0} services</div>
           </div>`).join('')}
       </div>`;
 
@@ -155,7 +163,8 @@ export function afterRender({ root }) {
 
     stepEl.querySelectorAll('.booking-category-card').forEach((card) => {
       card.addEventListener('click', () => {
-        state.category = card.dataset.cat;
+        state.categoryId = card.dataset.catId;
+        state.categoryName = card.dataset.catName;
         state.service = null;
         state.staff = null;
         state.time = null;
@@ -170,8 +179,8 @@ export function afterRender({ root }) {
   async function renderServices() {
     const { data, error } = await supabase
       .from('services')
-      .select('id, service_name, service_description, service_duration_minutes, price')
-      .eq('category', state.category)
+      .select('id, category_id, service_name, service_description, service_duration_minutes, price')
+      .eq('category_id', state.categoryId)
       .eq('is_active', true)
       .order('service_name');
 
@@ -253,13 +262,14 @@ export function afterRender({ root }) {
       // Load existing booking to pre-fill service/staff
       const { data: bk, error } = await supabase
         .from('bookings')
-        .select('*, services(service_name, service_duration_minutes, price, category)')
+        .select('*, services(service_name, service_duration_minutes, price, category, category_id)')
         .eq('id', state.modifyBookingId)
         .single();
       if (error || !bk) { showAlert(t('booking.error.notFound')); return; }
       state.originalBooking = bk;
       state.service = { id: bk.service_id, ...bk.services };
-      state.category = bk.services?.category;
+      state.categoryId = bk.services?.category_id ?? null;
+      state.categoryName = bk.services?.category ?? null;
       state.staff = bk.staff_user_id;
       state.date = bk.booking_date;
     }
@@ -353,7 +363,7 @@ export function afterRender({ root }) {
       <div class="booking-confirm-card mb-4">
         <div class="row g-2">
           <div class="col-6"><div class="text-muted small">${t('booking.confirm.service')}</div><div class="fw-semibold">${escHtml(state.service?.service_name ?? '')}</div></div>
-          <div class="col-6"><div class="text-muted small">${t('booking.confirm.category')}</div><div class="fw-semibold">${escHtml(state.category ?? '')}</div></div>
+          <div class="col-6"><div class="text-muted small">${t('booking.confirm.category')}</div><div class="fw-semibold">${escHtml(state.categoryName ?? '')}</div></div>
           <div class="col-6"><div class="text-muted small">${t('booking.confirm.staff')}</div><div class="fw-semibold">${escHtml(state.staffName ?? t('booking.step3.any'))}</div></div>
           <div class="col-6"><div class="text-muted small">${t('booking.confirm.duration')}</div><div class="fw-semibold">${state.service?.service_duration_minutes ?? '—'} min</div></div>
           <div class="col-6"><div class="text-muted small">${t('booking.confirm.date')}</div><div class="fw-semibold">${fmtDate(state.date)}</div></div>

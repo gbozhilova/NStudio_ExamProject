@@ -5,10 +5,12 @@
 
   <div id="admin-alert" class="alert d-none" role="alert"></div>
 
-  <!-- Tab nav -->
   <ul class="nav nav-tabs mb-4" id="admin-tabs" role="tablist">
     <li class="nav-item" role="presentation">
       <button class="nav-link active" data-admin-tab="users" type="button" data-i18n="admin.tab.users">Users</button>
+    </li>
+    <li class="nav-item" role="presentation">
+      <button class="nav-link" data-admin-tab="categories" type="button" data-i18n="admin.tab.categories">Categories</button>
     </li>
     <li class="nav-item" role="presentation">
       <button class="nav-link" data-admin-tab="services" type="button" data-i18n="admin.tab.services">Services</button>
@@ -24,7 +26,6 @@
     </li>
   </ul>
 
-  <!-- Users -->
   <div id="admin-pane-users" class="admin-pane">
     <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
       <input id="admin-user-search" type="search" class="form-control form-control-sm admin-search" placeholder="Search…" />
@@ -49,7 +50,18 @@
     </div>
   </div>
 
-  <!-- Services -->
+  <div id="admin-pane-categories" class="admin-pane d-none">
+    <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+      <div>
+        <div class="small text-light-muted text-uppercase letter-spaced mb-1">Catalog</div>
+        <h2 class="h4 mb-0" data-i18n="admin.categories.heading">Categories</h2>
+      </div>
+      <button class="btn btn-sm btn-success" id="admin-category-add" data-i18n="admin.btn.add">+ Add</button>
+    </div>
+    <div id="admin-categories-loading" class="text-center py-4"><div class="spinner-border text-primary"></div></div>
+    <div id="admin-categories-grid" class="d-none row g-3"></div>
+  </div>
+
   <div id="admin-pane-services" class="admin-pane d-none">
     <div class="d-flex justify-content-end mb-3">
       <button class="btn btn-sm btn-success" id="admin-service-add" data-i18n="admin.btn.add">+ Add</button>
@@ -74,7 +86,6 @@
     </div>
   </div>
 
-  <!-- Products -->
   <div id="admin-pane-products" class="admin-pane d-none">
     <div class="d-flex justify-content-end mb-3">
       <button class="btn btn-sm btn-success" id="admin-product-add" data-i18n="admin.btn.add">+ Add</button>
@@ -99,7 +110,6 @@
     </div>
   </div>
 
-  <!-- Bookings -->
   <div id="admin-pane-bookings" class="admin-pane d-none">
     <div id="admin-bookings-loading" class="text-center py-4"><div class="spinner-border text-primary"></div></div>
     <div id="admin-bookings-table" class="d-none">
@@ -120,31 +130,6 @@
     </div>
   </div>
 
-  <!-- Quiz -->
-  <div id="admin-pane-quiz" class="admin-pane d-none">
-    <div class="d-flex justify-content-end mb-3">
-      <button class="btn btn-sm btn-success" id="admin-quiz-add" data-i18n="admin.btn.add">+ Add</button>
-    </div>
-    <div id="admin-quiz-loading" class="text-center py-4"><div class="spinner-border text-primary"></div></div>
-    <div id="admin-quiz-table" class="d-none">
-      <div class="table-responsive">
-        <table class="table table-hover align-middle">
-          <thead class="table-light">
-            <tr>
-              <th>#</th>
-              <th data-i18n="admin.col.question">Question</th>
-              <th data-i18n="admin.col.type">Type</th>
-              <th data-i18n="admin.col.active">Active</th>
-              <th class="text-end" data-i18n="customers.col.actions">Actions</th>
-            </tr>
-          </thead>
-          <tbody id="admin-quiz-tbody"></tbody>
-        </table>
-      </div>
-    </div>
-  </div>
-
-  <!-- Quiz -->
   <div id="admin-pane-quiz" class="admin-pane d-none">
     <div class="d-flex justify-content-end mb-3">
       <button class="btn btn-sm btn-success" id="admin-quiz-add" data-i18n="admin.btn.add">+ Add</button>
@@ -168,7 +153,6 @@
     </div>
   </div>
 
-  <!-- Shared modal -->
   <div class="modal fade" id="admin-modal" tabindex="-1" aria-labelledby="admin-modal-title" aria-hidden="true">
     <div class="modal-dialog modal-lg">
       <div class="modal-content">

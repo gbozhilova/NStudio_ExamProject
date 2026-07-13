@@ -2,6 +2,7 @@ import { supabase } from './supabase.js';
 
 export const BUCKETS = {
   AVATARS: 'profile-images',
+  CATEGORIES: 'category-images',
   PRODUCTS: 'product-images',
   BOOKINGS: 'booking-files'
 };
@@ -91,6 +92,12 @@ export function triggerDownload(blob, fileName) {
 export function productImagePath(productId, fileName) {
   const ext = fileName.split('.').pop().toLowerCase();
   return `${productId}/${Date.now()}.${ext}`;
+}
+
+/** Build a storage path for a category image */
+export function categoryImagePath(categoryId, fileName) {
+  const ext = fileName.split('.').pop().toLowerCase();
+  return `${categoryId}/${Date.now()}.${ext}`;
 }
 
 /** Build a storage path for a user avatar */

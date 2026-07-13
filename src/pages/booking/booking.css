@@ -80,41 +80,62 @@
 /* Category cards */
 .booking-category-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-  gap: 1rem;
+  grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+  gap: 1.15rem;
 }
 
 .booking-category-card {
-  border: 2px solid #dee2e6;
-  border-radius: 0.75rem;
-  padding: 1.25rem 0.75rem;
+  position: relative;
+  border: 1px solid rgba(232, 216, 194, 0.7);
+  border-radius: 0;
+  padding: 0.9rem;
   text-align: center;
   cursor: pointer;
   transition: border-color 0.15s, transform 0.15s, box-shadow 0.15s;
-  background: #fff;
+  background: #f5ece2;
   user-select: none;
+  box-shadow: 0 14px 28px rgba(0,0,0,0.08);
+}
+
+.booking-category-card::before {
+  content: '';
+  position: absolute;
+  inset: 0.55rem;
+  border: 1px solid rgba(255, 255, 255, 0.8);
+  pointer-events: none;
 }
 
 .booking-category-card:hover {
-  border-color: var(--bs-primary);
-  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  border-color: rgba(49, 195, 176, 0.8);
+  box-shadow: 0 16px 34px rgba(0,0,0,0.12);
   transform: translateY(-2px);
 }
 
 .booking-category-card.selected {
-  border-color: var(--bs-primary);
-  background: #f0f4ff;
+  border-color: rgba(49, 195, 176, 0.95);
+  background: #fffdf8;
 }
 
-.booking-category-card .cat-icon {
-  font-size: 2rem;
-  margin-bottom: 0.5rem;
-  display: block;
+.booking-category-card .cat-thumb {
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  object-fit: cover;
+  margin-bottom: 0.85rem;
+  border: 6px solid #eadac6;
 }
 
 .booking-category-card .cat-name {
-  font-weight: 600;
-  font-size: 0.9rem;
+  position: relative;
+  z-index: 1;
+  font-weight: 700;
+  font-size: 1.05rem;
+  font-family: 'Cormorant Garamond', Georgia, serif;
+}
+
+.booking-category-card .cat-count {
+  position: relative;
+  z-index: 1;
+  color: rgba(17, 17, 17, 0.7) !important;
 }
 
 /* Service cards */
