@@ -6,6 +6,25 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+function errorMessage(error: unknown) {
+  if (error instanceof Error) return error.message || error.name;
+  if (typeof error === 'string') return error;
+  if (error && typeof error === 'object') {
+    const candidate = (error as { message?: unknown; error_description?: unknown; details?: unknown }).message
+      ?? (error as { message?: unknown; error_description?: unknown; details?: unknown }).error_description
+      ?? (error as { message?: unknown; error_description?: unknown; details?: unknown }).details;
+    if (typeof candidate === 'string' && candidate.trim()) return candidate;
+    try {
+      const serialized = JSON.stringify(error);
+      if (serialized && serialized !== '{}') return serialized;
+    } catch {
+      // Ignore JSON serialization failures and use a generic fallback.
+    }
+    return 'Unknown error';
+  }
+  return 'Unknown error';
+}
+
 function ok(body: unknown) {
   return new Response(JSON.stringify(body), {
     status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
@@ -40,11 +59,15 @@ serve(async (req) => {
     );
 
     const { error: deleteError } = await adminClient.auth.admin.deleteUser(userId);
-    if (deleteError) return ok({ error: deleteError.message });
+    if (deleteError) {
+      console.error('delete-user auth.admin.deleteUser failed', deleteError);
+      return ok({ error: errorMessage(deleteError), stage: 'deleteUser' });
+    }
 
     return ok({ success: true });
 
   } catch (err) {
-    return ok({ error: String(err) });
+    console.error('delete-user unexpected failure', err);
+    return ok({ error: errorMessage(err), stage: 'unexpected' });
   }
 });

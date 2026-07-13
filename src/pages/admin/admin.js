@@ -43,6 +43,24 @@ export function afterRender({ root }) {
     return date ? new Date(date).toLocaleDateString() : '—';
   }
 
+  function primaryRole(userRoles = []) {
+    if (userRoles.some((r) => r.role === 'admin')) return 'admin';
+    if (userRoles.some((r) => r.role === 'staff')) return 'staff';
+    return userRoles[0]?.role ?? 'customer';
+  }
+
+  function formatErrorMessage(error) {
+    if (!error) return t('admin.error.generic');
+    if (typeof error === 'string') return error;
+    if (error instanceof Error && error.message) return error.message;
+    try {
+      const serialized = JSON.stringify(error);
+      return serialized && serialized !== '{}' ? serialized : t('admin.error.generic');
+    } catch {
+      return t('admin.error.generic');
+    }
+  }
+
   function openModal(title, bodyHtml, footerHtml, onSave) {
     modalTitle.textContent = title;
     modalBody.innerHTML = bodyHtml;
@@ -192,9 +210,9 @@ export function afterRender({ root }) {
             <input id="eu-phone" class="form-control" value="${escapeHtml(user.phone ?? '')}" /></div>
           <div class="mb-3"><label class="form-label">${t('admin.col.role')}</label>
             <select id="eu-role" class="form-select">
-              <option value="customer" ${(user.user_roles?.[0]?.role ?? 'customer') === 'customer' ? 'selected' : ''}>customer</option>
-              <option value="staff" ${(user.user_roles?.[0]?.role) === 'staff' ? 'selected' : ''}>staff</option>
-              <option value="admin" ${(user.user_roles?.[0]?.role) === 'admin' ? 'selected' : ''}>admin</option>
+              <option value="customer" ${primaryRole(user.user_roles) === 'customer' ? 'selected' : ''}>customer</option>
+              <option value="staff" ${primaryRole(user.user_roles) === 'staff' ? 'selected' : ''}>staff</option>
+              <option value="admin" ${primaryRole(user.user_roles) === 'admin' ? 'selected' : ''}>admin</option>
             </select></div>
           <div class="mb-3">
             <label class="form-label">${t('admin.col.avatar')}</label>
@@ -252,7 +270,11 @@ export function afterRender({ root }) {
 
           await supabase.from('profiles').update(updates).eq('id', userId);
           await supabase.from('user_roles').delete().eq('user_id', userId);
-          await supabase.from('user_roles').insert({ user_id: userId, role });
+
+          const rolesToAssign = role === 'staff' ? ['customer', 'staff'] : [role];
+          await supabase.from('user_roles').insert(
+            rolesToAssign.map((currentRole) => ({ user_id: userId, role: currentRole }))
+          );
 
           bsModal.hide(); showAlert(t('customers.edit.success'));
           panes.users = false; loadUsers();
@@ -319,7 +341,7 @@ export function afterRender({ root }) {
         spinner.classList.add('d-none');
 
         if (error || data?.error) {
-          errEl.textContent = data?.error ?? error.message;
+          errEl.textContent = formatErrorMessage(data?.error ?? error);
           errEl.classList.remove('d-none');
           return;
         }
@@ -355,9 +377,8 @@ export function afterRender({ root }) {
         if (error || data?.error) {
           saveBtn.disabled = false;
           spinner.classList.add('d-none');
-          const alertEl = root.querySelector('#admin-alert');
           bsModal.hide();
-          showAlert(data?.error ?? error.message, 'danger');
+          showAlert(formatErrorMessage(data?.error ?? error), 'danger');
           return;
         }
 

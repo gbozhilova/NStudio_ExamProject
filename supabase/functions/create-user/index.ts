@@ -6,6 +6,25 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+function errorMessage(error: unknown) {
+  if (error instanceof Error) return error.message || error.name;
+  if (typeof error === 'string') return error;
+  if (error && typeof error === 'object') {
+    const candidate = (error as { message?: unknown; error_description?: unknown; details?: unknown }).message
+      ?? (error as { message?: unknown; error_description?: unknown; details?: unknown }).error_description
+      ?? (error as { message?: unknown; error_description?: unknown; details?: unknown }).details;
+    if (typeof candidate === 'string' && candidate.trim()) return candidate;
+    try {
+      const serialized = JSON.stringify(error);
+      if (serialized && serialized !== '{}') return serialized;
+    } catch {
+      // Ignore JSON serialization failures and use a generic fallback.
+    }
+    return 'Unknown error';
+  }
+  return 'Unknown error';
+}
+
 function ok(body: unknown) {
   return new Response(JSON.stringify(body), {
     status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
@@ -49,15 +68,25 @@ serve(async (req) => {
       user_metadata: { full_name: fullName ?? '' },
     });
 
-    if (createError) return ok({ error: createError.message });
+    if (createError) {
+      console.error('create-user auth.admin.createUser failed', createError);
+      return ok({ error: errorMessage(createError), stage: 'createUser' });
+    }
 
     const newUserId = data.user.id;
-    const { error: roleError } = await adminClient.from('user_roles').insert({ user_id: newUserId, role });
-    if (roleError) return ok({ error: roleError.message });
+    const rolesToInsert = role === 'staff' ? ['customer', 'staff'] : [role];
+    const { error: roleError } = await adminClient
+      .from('user_roles')
+      .insert(rolesToInsert.map((currentRole) => ({ user_id: newUserId, role: currentRole })));
+    if (roleError) {
+      console.error('create-user role insert failed', roleError);
+      return ok({ error: errorMessage(roleError), stage: 'roleInsert' });
+    }
 
     return ok({ user: data.user });
 
   } catch (err) {
-    return ok({ error: String(err) });
+    console.error('create-user unexpected failure', err);
+    return ok({ error: errorMessage(err), stage: 'unexpected' });
   }
 });
