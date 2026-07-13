@@ -170,7 +170,7 @@ export function afterRender({ root }) {
   async function renderServices() {
     const { data, error } = await supabase
       .from('services')
-      .select('id, service_name, service_description, service_duration_minutes, price, image_url')
+      .select('id, service_name, service_description, service_duration_minutes, price')
       .eq('category', state.category)
       .eq('is_active', true)
       .order('service_name');
@@ -191,7 +191,6 @@ export function afterRender({ root }) {
                   <span class="badge bg-primary bg-opacity-10 text-primary">€${Number(s.price).toFixed(2)}</span>
                 </div>
               </div>
-              ${s.image_url ? `<img src="${escHtml(s.image_url)}" class="rounded" style="width:64px;height:64px;object-fit:cover;flex-shrink:0">` : ''}
             </div>
           </div>`).join('')}
       </div>`;
