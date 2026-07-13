@@ -1,17 +1,17 @@
 <section class="services-page">
   <header class="services-hero page-panel rounded-4 p-4 p-lg-5 mb-4">
     <div class="services-hero-copy">
-      <p class="services-kicker script-font mb-2">Our Services</p>
-      <h1 class="display-4 fw-bold mb-3 text-uppercase">Beauty services by category</h1>
-      <p class="services-intro mb-0">
+      <p class="services-kicker script-font mb-2" data-i18n="services.hero.kicker">Our Services</p>
+      <h1 class="display-4 fw-bold mb-3 text-uppercase" data-i18n="services.hero.title">Beauty services by category</h1>
+      <p class="services-intro mb-0" data-i18n="services.hero.copy">
         Explore the salon menu by category, then tap a category strip item to reveal the services inside it.
       </p>
     </div>
     <div class="services-hero-note mt-4 mt-lg-0">
       <div class="services-note-card">
-        <div class="small text-light-muted text-uppercase letter-spaced mb-1">Quick booking</div>
-        <div class="h5 mb-2">Choose a category, then a service</div>
-        <p class="mb-0 text-light-muted">All active entries come from the Supabase `services` table.</p>
+        <div class="small text-light-muted text-uppercase letter-spaced mb-1" data-i18n="services.hero.quickBookingLabel">Quick booking</div>
+        <div class="h5 mb-2" data-i18n="services.hero.quickBookingTitle">Choose a category, then a service</div>
+        <p class="mb-0 text-light-muted" data-i18n="services.hero.quickBookingCopy">All active entries come from the Supabase `services` table.</p>
       </div>
     </div>
   </header>
@@ -19,7 +19,7 @@
   <section class="page-panel rounded-4 p-3 p-lg-4 mb-4 services-category-section">
     <div class="d-flex align-items-center justify-content-between gap-3 mb-3 flex-wrap">
       <div>
-        <div class="small text-light-muted text-uppercase letter-spaced mb-1">Categories</div>
+        <div class="small text-light-muted text-uppercase letter-spaced mb-1" data-i18n="services.categories.label">Categories</div>
         <h2 class="h4 mb-0" data-i18n="services.browseStrip">Browse by strip</h2>
       </div>
       <div id="services-category-count" class="small text-light-muted"></div>
@@ -38,9 +38,9 @@
   <section class="page-panel rounded-4 p-4 p-lg-5">
     <div class="d-flex flex-wrap align-items-end justify-content-between gap-3 mb-4">
       <div>
-        <div class="small text-light-muted text-uppercase letter-spaced mb-1">Selected category</div>
-        <h2 id="services-category-title" class="display-6 fw-bold mb-1">Loading…</h2>
-        <p id="services-category-copy" class="mb-0 text-light-muted">Fetching services from Supabase.</p>
+        <div class="small text-light-muted text-uppercase letter-spaced mb-1" data-i18n="services.selectedCategoryLabel">Selected category</div>
+        <h2 id="services-category-title" class="display-6 fw-bold mb-1" data-i18n="services.loading">Loading…</h2>
+        <p id="services-category-copy" class="mb-0 text-light-muted" data-i18n="services.fetching">Fetching services from Supabase.</p>
       </div>
       <a href="/booking" data-nav-link class="btn btn-primary btn-lg px-4" data-i18n="nav.booking">Book Now</a>
     </div>
