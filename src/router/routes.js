@@ -1,5 +1,6 @@
 ﻿const ROUTE_DEFINITIONS = [
   { path: '/', aliases: ['/home'], titleKey: 'nav.home', requiredRoles: null, load: () => import('../pages/home/home.js') },
+  { path: '/booking', titleKey: 'nav.booking', requiredRoles: null, load: () => import('../pages/booking/booking.js') },
   { path: '/services', titleKey: 'nav.services', requiredRoles: null, load: () => import('../pages/services/services.js') },
   { path: '/products', titleKey: 'nav.products', requiredRoles: null, load: () => import('../pages/products/products.js') },
   { path: '/calendar', titleKey: 'nav.calendar', requiredRoles: ['staff', 'admin'], load: () => import('../pages/calendar/calendar.js') },
