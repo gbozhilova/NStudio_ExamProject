@@ -1,0 +1,19 @@
+.profile-page .card { border-radius: 0.75rem; }
+
+#profile-avatar-wrap img, #profile-avatar-wrap .avatar-placeholder {
+  width: 80px; height: 80px; border-radius: 50%; object-fit: cover;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.8rem; font-weight: 700;
+  margin: 0 auto;
+}
+
+#profile-avatar-wrap .avatar-placeholder {
+  background: linear-gradient(135deg, #d946ef, #22c55e); color: #fff;
+}
+
+.booking-card {
+  border: 1px solid #dee2e6; border-radius: 0.6rem; padding: 0.9rem 1rem;
+  margin-bottom: 0.6rem; background: #fff;
+}
+
+.booking-card .status-badge { font-size: 0.72rem; }

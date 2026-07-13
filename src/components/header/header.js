@@ -7,10 +7,11 @@ import { hasRole } from '../../services/session.js';
 
 export function renderHeader(currentPath, locale, user) {
   const adminBtn = user && hasRole('admin')
-    ? `<a href="/admin" data-nav-link data-route="/admin" class="btn btn-sm btn-warning fw-semibold">Admin</a>`
+    ? `<a href="/calendar" data-nav-link data-route="/calendar" class="btn btn-sm btn-warning fw-semibold">Admin</a>`
     : '';
   const authSlot = user
     ? `<span class="text-white-50 small d-none d-md-inline">${escapeHtml(user.email)}</span>
+       <a href="/profile" data-nav-link data-route="/profile" class="btn btn-sm btn-outline-light">My Bookings</a>
        ${adminBtn}
        <button id="header-logout" class="btn btn-sm btn-outline-danger">Logout</button>`
     : `<a href="/login" data-nav-link data-route="/login" class="nav-pill btn btn-sm btn-outline-light">Login</a>

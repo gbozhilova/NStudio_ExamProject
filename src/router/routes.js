@@ -8,6 +8,7 @@
   { path: '/quiz', titleKey: 'nav.quiz', requiredRoles: null, load: () => import('../pages/quiz/quiz.js') },
   { path: '/login',    titleKey: 'nav.login',    requiredRoles: null,        load: () => import('../pages/auth/login.js') },
   { path: '/register', titleKey: 'nav.register', requiredRoles: null,        load: () => import('../pages/auth/register.js') },
+  { path: '/profile',  titleKey: 'nav.profile',  requiredRoles: null,        load: () => import('../pages/profile/profile.js') },
   { path: '/admin',    titleKey: 'nav.admin',    requiredRoles: ['admin'],    load: () => import('../pages/admin/admin.js') }
 ];
 

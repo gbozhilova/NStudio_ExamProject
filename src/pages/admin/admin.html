@@ -19,6 +19,9 @@
     <li class="nav-item" role="presentation">
       <button class="nav-link" data-admin-tab="bookings" type="button" data-i18n="admin.tab.bookings">Bookings</button>
     </li>
+    <li class="nav-item" role="presentation">
+      <button class="nav-link" data-admin-tab="quiz" type="button" data-i18n="admin.tab.quiz">Quiz</button>
+    </li>
   </ul>
 
   <!-- Users -->
@@ -112,6 +115,54 @@
             </tr>
           </thead>
           <tbody id="admin-bookings-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Quiz -->
+  <div id="admin-pane-quiz" class="admin-pane d-none">
+    <div class="d-flex justify-content-end mb-3">
+      <button class="btn btn-sm btn-success" id="admin-quiz-add" data-i18n="admin.btn.add">+ Add</button>
+    </div>
+    <div id="admin-quiz-loading" class="text-center py-4"><div class="spinner-border text-primary"></div></div>
+    <div id="admin-quiz-table" class="d-none">
+      <div class="table-responsive">
+        <table class="table table-hover align-middle">
+          <thead class="table-light">
+            <tr>
+              <th>#</th>
+              <th data-i18n="admin.col.question">Question</th>
+              <th data-i18n="admin.col.type">Type</th>
+              <th data-i18n="admin.col.active">Active</th>
+              <th class="text-end" data-i18n="customers.col.actions">Actions</th>
+            </tr>
+          </thead>
+          <tbody id="admin-quiz-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Quiz -->
+  <div id="admin-pane-quiz" class="admin-pane d-none">
+    <div class="d-flex justify-content-end mb-3">
+      <button class="btn btn-sm btn-success" id="admin-quiz-add" data-i18n="admin.btn.add">+ Add</button>
+    </div>
+    <div id="admin-quiz-loading" class="text-center py-4"><div class="spinner-border text-primary"></div></div>
+    <div id="admin-quiz-table" class="d-none">
+      <div class="table-responsive">
+        <table class="table table-hover align-middle">
+          <thead class="table-light">
+            <tr>
+              <th style="width:3rem">#</th>
+              <th data-i18n="admin.col.question">Question</th>
+              <th data-i18n="admin.col.type">Type</th>
+              <th data-i18n="admin.col.active">Active</th>
+              <th class="text-end" data-i18n="customers.col.actions">Actions</th>
+            </tr>
+          </thead>
+          <tbody id="admin-quiz-tbody"></tbody>
         </table>
       </div>
     </div>

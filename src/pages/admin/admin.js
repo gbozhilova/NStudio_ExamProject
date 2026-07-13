@@ -60,7 +60,7 @@ export function afterRender({ root }) {
 
   // ── Tab switching ─────────────────────────────────────────────────────────
 
-  const panes = { users: false, services: false, products: false, bookings: false };
+  const panes = { users: false, services: false, products: false, bookings: false, quiz: false };
 
   function activateTab(tabName) {
     root.querySelectorAll('[data-admin-tab]').forEach((btn) => {
@@ -718,8 +718,116 @@ export function afterRender({ root }) {
     });
   }
 
+  // ── QUIZ tab ──────────────────────────────────────────────────────────────
+
+  async function loadQuiz() {
+    const loadEl = root.querySelector('#admin-quiz-loading');
+    const tableEl = root.querySelector('#admin-quiz-table');
+    loadEl.classList.remove('d-none'); tableEl.classList.add('d-none');
+
+    const { data, error } = await supabase
+      .from('quiz_questions')
+      .select('*')
+      .order('sort_order')
+      .order('created_at');
+
+    loadEl.classList.add('d-none'); tableEl.classList.remove('d-none');
+    if (error) { showAlert(error.message, 'danger'); return; }
+
+    const tbody = root.querySelector('#admin-quiz-tbody');
+    if (!data.length) {
+      tbody.innerHTML = `<tr><td colspan="5" class="text-center text-muted py-4">${t('admin.empty')}</td></tr>`;
+      return;
+    }
+
+    tbody.innerHTML = data.map((q, i) => `<tr>
+      <td class="text-muted">${q.sort_order ?? i + 1}</td>
+      <td class="fw-semibold">${escapeHtml(q.question_text)}</td>
+      <td><span class="badge bg-light text-dark border">${escapeHtml(q.question_type)}</span></td>
+      <td>${q.is_active ? '<span class="badge bg-success">✓</span>' : '<span class="badge bg-secondary">✗</span>'}</td>
+      <td class="text-end">
+        <div class="btn-group btn-group-sm">
+          <button class="btn btn-outline-primary" data-action="edit-quiz" data-id="${q.id}">${t('customers.btn.edit')}</button>
+          <button class="btn btn-outline-danger" data-action="delete-quiz" data-id="${q.id}">${t('customers.btn.delete')}</button>
+        </div>
+      </td>
+    </tr>`).join('');
+
+    tbody.querySelectorAll('[data-action="edit-quiz"]').forEach((btn) =>
+      btn.addEventListener('click', () => openQuizForm(btn.dataset.id, data.find((q) => q.id === btn.dataset.id))));
+    tbody.querySelectorAll('[data-action="delete-quiz"]').forEach((btn) =>
+      btn.addEventListener('click', () => deleteQuiz(btn.dataset.id)));
+  }
+
+  function quizFormBody(q = {}) {
+    const opts = Array.isArray(q.options) ? q.options.join('\n') : (q.options ? JSON.stringify(q.options) : '');
+    return `
+      <div id="modal-error" class="alert alert-danger d-none"></div>
+      <div class="mb-3"><label class="form-label">${t('admin.col.question')}</label>
+        <textarea id="qf-text" class="form-control" rows="3">${escapeHtml(q.question_text ?? '')}</textarea></div>
+      <div class="row g-3">
+        <div class="col-6"><label class="form-label">${t('admin.col.type')}</label>
+          <select id="qf-type" class="form-select">
+            <option value="single_choice" ${q.question_type === 'single_choice' ? 'selected' : ''}>Single choice</option>
+            <option value="multi_choice" ${q.question_type === 'multi_choice' ? 'selected' : ''}>Multi choice</option>
+            <option value="text" ${q.question_type === 'text' ? 'selected' : ''}>Free text</option>
+          </select></div>
+        <div class="col-3"><label class="form-label">Sort order</label>
+          <input id="qf-sort" type="number" class="form-control" value="${q.sort_order ?? 0}" min="0" /></div>
+        <div class="col-3 d-flex align-items-end pb-1">
+          <div class="form-check"><input id="qf-active" class="form-check-input" type="checkbox" ${(q.is_active ?? true) ? 'checked' : ''} />
+          <label class="form-check-label" for="qf-active">${t('admin.col.active')}</label></div>
+        </div>
+      </div>
+      <div class="mt-3" id="qf-options-wrap">
+        <label class="form-label">Options <small class="text-muted">(one per line)</small></label>
+        <textarea id="qf-options" class="form-control" rows="4" placeholder="Option A&#10;Option B&#10;Option C">${escapeHtml(opts)}</textarea>
+      </div>`;
+  }
+
+  async function saveQuiz(id) {
+    const errEl = modalBody.querySelector('#modal-error');
+    const text = modalBody.querySelector('#qf-text').value.trim();
+    const type = modalBody.querySelector('#qf-type').value;
+    const sort = parseInt(modalBody.querySelector('#qf-sort').value, 10);
+    const active = modalBody.querySelector('#qf-active').checked;
+    const rawOpts = modalBody.querySelector('#qf-options').value.trim();
+    const options = rawOpts ? rawOpts.split('\n').map((o) => o.trim()).filter(Boolean) : null;
+
+    if (!text) { errEl.textContent = t('auth.error.requiredFields'); errEl.classList.remove('d-none'); return; }
+
+    const payload = { question_text: text, question_type: type, sort_order: isNaN(sort) ? 0 : sort, is_active: active, options: options?.length ? options : null };
+    const { error } = id
+      ? await supabase.from('quiz_questions').update(payload).eq('id', id)
+      : await supabase.from('quiz_questions').insert(payload);
+    if (error) { errEl.textContent = error.message; errEl.classList.remove('d-none'); return; }
+    bsModal.hide();
+    showAlert(t('admin.saved'));
+    panes.quiz = false;
+    loadQuiz();
+  }
+
+  function openQuizForm(id = null, q = {}) {
+    const title = id ? `${t('customers.btn.edit')} — Q${q.sort_order ?? ''}` : '+ ' + t('admin.tab.quiz');
+    openModal(title, quizFormBody(q),
+      `<button class="btn btn-secondary" data-bs-dismiss="modal">${t('modal.close')}</button>
+       <button id="modal-save" class="btn btn-primary">${t('customers.edit.save')}</button>`,
+      () => saveQuiz(id));
+  }
+
+  async function deleteQuiz(id) {
+    if (!confirm(t('admin.delete.confirm'))) return;
+    const { error } = await supabase.from('quiz_questions').delete().eq('id', id);
+    if (error) { showAlert(error.message, 'danger'); return; }
+    showAlert(t('admin.deleted'));
+    panes.quiz = false;
+    loadQuiz();
+  }
+
+  root.querySelector('#admin-quiz-add').addEventListener('click', () => openQuizForm());
+
   // ── Loader map & initial tab ───────────────────────────────────────────────
 
-  const LOADERS = { users: loadUsers, services: loadServices, products: loadProducts, bookings: loadBookings };
+  const LOADERS = { users: loadUsers, services: loadServices, products: loadProducts, bookings: loadBookings, quiz: loadQuiz };
   activateTab('users');
 }

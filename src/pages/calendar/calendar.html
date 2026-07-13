@@ -1,4 +1,73 @@
-<section class="page-panel p-4 rounded-4 shadow-sm">
-  <h1 class="h2 fw-bold mb-3" data-i18n="calendar.heading">Calendar</h1>
-  <p class="mb-0" data-i18n="calendar.copy">Route shell for staff schedules, blocks, and appointments.</p>
-</section>
+<div class="staff-calendar">
+
+  <!-- ── Toolbar ──────────────────────────────────────────────────────── -->
+  <div class="cal-toolbar d-flex flex-wrap align-items-center gap-2 mb-3">
+
+    <!-- Date navigation -->
+    <div class="btn-group btn-group-sm" role="group">
+      <button id="cal-prev" class="btn btn-outline-secondary"><i class="bi bi-chevron-left"></i></button>
+      <button id="cal-today" class="btn btn-outline-secondary" data-i18n="cal.today">Today</button>
+      <button id="cal-next" class="btn btn-outline-secondary"><i class="bi bi-chevron-right"></i></button>
+    </div>
+
+    <span id="cal-range-label" class="fw-semibold text-nowrap" style="min-width:180px"></span>
+
+    <!-- View selector -->
+    <div class="btn-group btn-group-sm ms-auto" role="group" aria-label="Calendar view">
+      <button class="btn btn-outline-primary cal-view-btn active" data-view="day" data-i18n="cal.view.day">Day</button>
+      <button class="btn btn-outline-primary cal-view-btn" data-view="3day" data-i18n="cal.view.3day">3-Day</button>
+      <button class="btn btn-outline-primary cal-view-btn" data-view="week" data-i18n="cal.view.week">Week</button>
+      <button class="btn btn-outline-primary cal-view-btn" data-view="month" data-i18n="cal.view.month">Month</button>
+    </div>
+
+    <!-- Add block button -->
+    <button id="cal-add-block" class="btn btn-sm btn-outline-danger ms-1">
+      <i class="bi bi-slash-circle me-1"></i><span data-i18n="cal.addBlock">Block</span>
+    </button>
+
+    <!-- Admin Panel shortcut (admin only — rendered by JS) -->
+    <a id="cal-admin-link" href="/admin" data-nav-link class="btn btn-sm btn-outline-warning ms-1 d-none">
+      <i class="bi bi-gear me-1"></i><span data-i18n="cal.adminPanel">Admin Panel</span>
+    </a>
+  </div>
+
+  <!-- ── Filters ──────────────────────────────────────────────────────── -->
+  <div class="cal-filters d-flex flex-wrap gap-2 mb-3 align-items-center">
+    <select id="cal-filter-category" class="form-select form-select-sm" style="max-width:150px">
+      <option value="" data-i18n="cal.filter.allCategories">All Categories</option>
+    </select>
+    <select id="cal-filter-service" class="form-select form-select-sm" style="max-width:170px">
+      <option value="" data-i18n="cal.filter.allServices">All Services</option>
+    </select>
+    <select id="cal-filter-staff" class="form-select form-select-sm" style="max-width:150px">
+      <option value="" data-i18n="cal.filter.allStaff">All Staff</option>
+    </select>
+    <input id="cal-filter-customer" type="search" class="form-control form-control-sm" style="max-width:160px"
+      placeholder="Search customer…" />
+    <button id="cal-filter-clear" class="btn btn-sm btn-link text-muted p-0" data-i18n="cal.filter.clear">Clear</button>
+  </div>
+
+  <!-- ── Alert ─────────────────────────────────────────────────────────── -->
+  <div id="cal-alert" class="alert d-none" role="alert"></div>
+
+  <!-- ── Calendar grid ─────────────────────────────────────────────────── -->
+  <div id="cal-grid-wrap" class="cal-grid-wrap">
+    <div class="text-center py-5"><div class="spinner-border text-primary"></div></div>
+  </div>
+
+  <!-- ── Shared modal ──────────────────────────────────────────────────── -->
+  <div class="modal fade" id="cal-modal" tabindex="-1" aria-labelledby="cal-modal-title" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="cal-modal-title"></h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body" id="cal-modal-body"></div>
+        <div class="modal-footer" id="cal-modal-footer"></div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
