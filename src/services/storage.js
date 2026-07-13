@@ -4,6 +4,7 @@ export const BUCKETS = {
   AVATARS: 'profile-images',
   CATEGORIES: 'category-images',
   PRODUCTS: 'product-images',
+  PRODUCT_REVIEW_IMAGES: 'product-review-images',
   BOOKINGS: 'booking-files'
 };
 
@@ -92,6 +93,12 @@ export function triggerDownload(blob, fileName) {
 export function productImagePath(productId, fileName) {
   const ext = fileName.split('.').pop().toLowerCase();
   return `${productId}/${Date.now()}.${ext}`;
+}
+
+/** Build a storage path for a product review image */
+export function productReviewImagePath(userId, reviewId, fileName) {
+  const ext = fileName.split('.').pop().toLowerCase();
+  return `${userId}/${reviewId}/${Date.now()}.${ext}`;
 }
 
 /** Build a storage path for a category image */

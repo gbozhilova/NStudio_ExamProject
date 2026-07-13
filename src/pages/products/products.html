@@ -1,4 +1,78 @@
-<section class="page-panel p-4 rounded-4 shadow-sm">
-  <h1 class="h2 fw-bold mb-3" data-i18n="products.heading">Products</h1>
-  <p class="mb-0" data-i18n="products.copy">Route shell for product catalogue and storage-backed media.</p>
+<section class="products-page">
+  <section class="page-panel rounded-4 p-3 p-lg-4 mb-4 products-category-section">
+    <div class="d-flex align-items-center justify-content-between gap-3 mb-3 flex-wrap">
+      <div>
+        <p class="products-kicker script-font mb-0" data-i18n="products.categories.label">Our Products</p>
+        <div class="small text-light-muted text-uppercase letter-spaced mt-1" data-i18n="products.browseStrip">Review by Product Category</div>
+      </div>
+    </div>
+    <div class="products-strip-shell">
+      <button id="products-strip-prev" type="button" class="btn btn-sm btn-outline-secondary products-strip-nav" aria-label="Previous categories">
+        <i class="bi bi-chevron-left"></i>
+      </button>
+      <div id="products-strip" class="products-strip" role="tablist" aria-label="Product categories"></div>
+      <button id="products-strip-next" type="button" class="btn btn-sm btn-outline-secondary products-strip-nav" aria-label="Next categories">
+        <i class="bi bi-chevron-right"></i>
+      </button>
+    </div>
+  </section>
+
+  <section class="page-panel rounded-4 p-4 p-lg-5">
+    <div class="d-flex flex-wrap align-items-end justify-content-between gap-3 mb-4">
+      <div>
+        <div class="small text-light-muted text-uppercase letter-spaced mb-1" data-i18n="products.selectedCategoryLabel">Selected category</div>
+        <h2 id="products-category-title" class="display-6 fw-bold mb-1" data-i18n="products.loading">Loading…</h2>
+        <p id="products-category-copy" class="mb-0 text-light-muted" data-i18n="products.fetching">Fetching products from Supabase.</p>
+      </div>
+    </div>
+
+    <div id="products-loading" class="text-center py-5">
+      <div class="spinner-border text-info" role="status" aria-hidden="true"></div>
+    </div>
+
+    <div id="products-list" class="row g-4 d-none"></div>
+  </section>
+
+  <section class="page-panel rounded-4 p-4 p-lg-5 mt-4 products-reviews-section">
+    <div class="d-flex flex-wrap align-items-end justify-content-between gap-3 mb-4">
+      <div>
+        <div class="small text-light-muted text-uppercase letter-spaced mb-1" data-i18n="products.reviews.label">Product Reviews</div>
+        <h2 id="products-review-title" class="display-6 fw-bold mb-1" data-i18n="products.reviews.title">Choose a product to read and write reviews</h2>
+        <p id="products-review-copy" class="mb-0 text-light-muted" data-i18n="products.reviews.copy">Leave a star rating and upload photos that show how the product performs in real use.</p>
+      </div>
+      <div class="products-review-summary text-lg-end">
+        <div id="products-review-average" class="display-6 fw-bold mb-0">—</div>
+        <div id="products-review-count" class="small text-light-muted" data-i18n="products.reviews.total">Reviews</div>
+      </div>
+    </div>
+
+    <div class="row g-4">
+      <div class="col-12 col-lg-5">
+        <div class="product-review-form-panel h-100">
+          <form id="product-review-form" novalidate>
+            <div id="product-review-gate" class="alert alert-warning d-none mb-3"></div>
+            <div class="mb-3">
+              <label class="form-label" data-i18n="products.reviews.rating">Your rating</label>
+              <div id="product-review-stars" class="review-stars"></div>
+            </div>
+            <div class="mb-3">
+              <label for="product-review-text" class="form-label" data-i18n="products.reviews.comment">Your review</label>
+              <textarea id="product-review-text" class="form-control" rows="5" placeholder="Share what you liked, how you used it, and who it suits best."></textarea>
+            </div>
+            <div class="mb-3">
+              <label for="product-review-images" class="form-label" data-i18n="products.reviews.upload">Upload photos</label>
+              <input id="product-review-images" type="file" class="form-control" accept="image/*" multiple />
+              <div class="form-text" data-i18n="products.reviews.uploadHint">Add one or more pictures that show the product in use.</div>
+            </div>
+            <button id="product-review-submit" type="submit" class="btn btn-primary w-100" data-i18n="products.reviews.submit">Submit review</button>
+          </form>
+        </div>
+      </div>
+      <div class="col-12 col-lg-7">
+        <div id="product-reviews-list" class="d-grid gap-3">
+          <div class="alert alert-info mb-0" data-i18n="products.reviews.selectProduct">Select a product card to load reviews.</div>
+        </div>
+      </div>
+    </div>
+  </section>
 </section>

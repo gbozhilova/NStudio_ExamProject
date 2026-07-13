@@ -1,3 +1,124 @@
 .site-footer {
-  background: rgba(255, 255, 255, 0.72);
+  background: rgba(255, 248, 241, 0.92);
+  overflow: hidden;
+}
+
+.footer-brand-banner {
+  background:
+    linear-gradient(180deg, rgba(255, 248, 241, 0.98), rgba(252, 241, 231, 0.95));
+  border-bottom: 1px solid rgba(208, 178, 137, 0.24);
+}
+
+.footer-brand-label {
+  color: #c19a58;
+}
+
+.footer-brand-title {
+  font-family: 'Cormorant Garamond', Georgia, serif;
+  font-size: clamp(1.8rem, 3vw, 2.6rem);
+  font-weight: 700;
+  color: #2b241d;
+}
+
+.footer-brand-marquee {
+  overflow: hidden;
+  mask-image: linear-gradient(90deg, transparent, #000 7%, #000 93%, transparent);
+}
+
+.footer-brand-track {
+  display: flex;
+  width: max-content;
+  animation: footerBrandScroll 28s linear infinite;
+}
+
+.footer-brand-group {
+  display: flex;
+  align-items: center;
+  gap: 1.1rem;
+  padding-right: 1.1rem;
+}
+
+.footer-brand-item {
+  min-width: 9.75rem;
+  min-height: 5rem;
+  padding: 0.8rem 1rem;
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  border-radius: 1rem;
+  background: rgba(255, 255, 255, 0.65);
+  border: 1px solid rgba(208, 178, 137, 0.28);
+  box-shadow: 0 10px 22px rgba(73, 52, 28, 0.08);
+}
+
+.footer-brand-wordmark {
+  font-family: 'Cormorant Garamond', Georgia, serif;
+  font-size: clamp(1.25rem, 2vw, 1.75rem);
+  font-weight: 700;
+  line-height: 0.95;
+  color: #b98a2f;
+  letter-spacing: 0.02em;
+}
+
+.footer-brand-script {
+  font-family: 'Dancing Script', 'Brush Script MT', cursive;
+  font-size: clamp(1.55rem, 2.5vw, 2.05rem);
+  line-height: 0.9;
+}
+
+html[lang='bg'] .footer-brand-script {
+  font-family: 'Marck Script', 'Dancing Script', 'Brush Script MT', cursive;
+}
+
+.footer-brand-subword {
+  margin-top: 0.25rem;
+  font-size: 0.72rem;
+  letter-spacing: 0.26em;
+  text-transform: uppercase;
+  color: rgba(43, 36, 29, 0.66);
+}
+
+.footer-brand-loreal {
+  transform: translateY(0.1rem);
+}
+
+.footer-brand-keun {
+  transform: translateY(-0.15rem);
+}
+
+.footer-brand-kryolan {
+  transform: translateY(0.05rem);
+}
+
+.footer-brand-gelish {
+  transform: translateY(-0.1rem);
+}
+
+@keyframes footerBrandScroll {
+  from {
+    transform: translateX(0);
+  }
+
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .footer-brand-track {
+    animation: none;
+  }
+}
+
+@media (max-width: 575.98px) {
+  .footer-brand-group {
+    gap: 0.75rem;
+  }
+
+  .footer-brand-item {
+    min-width: 8.2rem;
+    padding: 0.7rem 0.85rem;
+  }
 }
