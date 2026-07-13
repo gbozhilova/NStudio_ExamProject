@@ -31,6 +31,10 @@ function ok(body: unknown) {
   });
 }
 
+function isDuplicateEmailError(error: unknown) {
+  return /already registered|already exists|duplicate/i.test(errorMessage(error));
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
 
@@ -61,6 +65,12 @@ serve(async (req) => {
       return ok({ error: 'email, password and role are required' });
     }
 
+    const { data: existingUsers } = await adminClient.auth.admin.listUsers();
+    const existingUser = existingUsers?.users?.find((user) => user.email?.toLowerCase() === String(email).toLowerCase());
+    if (existingUser) {
+      return ok({ error: 'This email is already registered.', stage: 'duplicateEmail' });
+    }
+
     const { data, error: createError } = await adminClient.auth.admin.createUser({
       email,
       password,
@@ -70,6 +80,9 @@ serve(async (req) => {
 
     if (createError) {
       console.error('create-user auth.admin.createUser failed', createError);
+      if (isDuplicateEmailError(createError)) {
+        return ok({ error: 'This email is already registered.', stage: 'duplicateEmail' });
+      }
       return ok({ error: errorMessage(createError), stage: 'createUser' });
     }
 

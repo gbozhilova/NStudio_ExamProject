@@ -1,5 +1,10 @@
 import { supabase } from './supabase.js';
 
+function isDuplicateEmailError(error) {
+  const message = String(error?.message ?? error?.error_description ?? error?.details ?? error ?? '');
+  return /already registered|already exists|duplicate/i.test(message);
+}
+
 export async function signUp({ email, password, fullName }) {
   const { data, error } = await supabase.auth.signUp({
     email,
@@ -7,7 +12,12 @@ export async function signUp({ email, password, fullName }) {
     options: { data: { full_name: fullName } }
   });
 
-  if (error) throw error;
+  if (error) {
+    if (isDuplicateEmailError(error)) {
+      throw new Error('This email is already registered. Please sign in instead.');
+    }
+    throw error;
+  }
 
   const user = data.user;
   if (user) {

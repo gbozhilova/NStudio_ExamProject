@@ -12,6 +12,10 @@ function ok(body: unknown) {
   });
 }
 
+function isDuplicateEmailError(message: string) {
+  return /already registered|already exists|duplicate/i.test(message);
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
 
@@ -31,7 +35,7 @@ serve(async (req) => {
     // Find or create user
     let userId: string;
     const { data: existingUsers } = await adminClient.auth.admin.listUsers();
-    const existingUser = existingUsers?.users?.find((u) => u.email === email);
+    const existingUser = existingUsers?.users?.find((u) => u.email?.toLowerCase() === String(email).toLowerCase());
 
     if (existingUser) {
       userId = existingUser.id;
@@ -43,7 +47,12 @@ serve(async (req) => {
         email_confirm: true,
         user_metadata: { full_name: fullName ?? email.split('@')[0] }
       });
-      if (createError) return ok({ error: createError.message });
+      if (createError) {
+        if (isDuplicateEmailError(createError.message)) {
+          return ok({ error: 'This email is already registered.' });
+        }
+        return ok({ error: createError.message });
+      }
       userId = newUser.user.id;
 
       // Assign customer role
