@@ -16,6 +16,15 @@ function isDuplicateEmailError(message: string) {
   return /already registered|already exists|duplicate/i.test(message);
 }
 
+function escapeHtml(value: string) {
+  return String(value)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
 
@@ -58,12 +67,38 @@ serve(async (req) => {
       // Assign customer role
       await adminClient.from('user_roles').insert({ user_id: userId, role: 'customer' });
 
-      // Send password reset so they can set their own password
-      await adminClient.auth.admin.generateLink({
+      // Generate a password setup link and send it by email.
+      const { data: linkData, error: linkError } = await adminClient.auth.admin.generateLink({
         type: 'recovery',
         email,
         options: { redirectTo: `${req.headers.get('origin') ?? ''}/login` }
       });
+      if (linkError) {
+        return ok({ error: linkError.message });
+      }
+
+      const actionLink = linkData?.properties?.action_link;
+      const resendKey = Deno.env.get('RESEND_API_KEY');
+      if (resendKey && actionLink) {
+        await fetch('https://api.resend.com/emails', {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${resendKey}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            from: 'NStudio Salon <bookings@nstudio.salon>',
+            to: email,
+            subject: 'Set your NStudio Salon password',
+            html: `
+              <h2>Welcome to NStudio Salon</h2>
+              <p>Hello ${escapeHtml(fullName ?? email)},</p>
+              <p>Your appointment was created and your account is ready.</p>
+              <p><a href="${actionLink}">Set your password</a></p>
+              <p>If you did not expect this email, you can ignore it.</p>
+            `
+          })
+        });
+      } else {
+        console.log('Password setup link generated for booking-created user', { email, actionLinkPresent: !!actionLink });
+      }
     }
 
     // Fetch service name for email
