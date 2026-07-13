@@ -3,6 +3,7 @@
   { path: '/booking', titleKey: 'nav.booking', requiredRoles: null, load: () => import('../pages/booking/booking.js') },
   { path: '/services', titleKey: 'nav.services', requiredRoles: null, load: () => import('../pages/services/services.js') },
   { path: '/products', titleKey: 'nav.products', requiredRoles: null, load: () => import('../pages/products/products.js') },
+  { path: '/contact', titleKey: 'nav.contact', requiredRoles: null, load: () => import('../pages/contact/contact.js') },
   { path: '/calendar', titleKey: 'nav.calendar', requiredRoles: ['staff', 'admin'], load: () => import('../pages/calendar/calendar.js') },
   { path: '/customers', titleKey: 'nav.customers', requiredRoles: ['staff', 'admin'], load: () => import('../pages/customers/customers.js') },
   { path: '/quiz', titleKey: 'nav.quiz', requiredRoles: null, load: () => import('../pages/quiz/quiz.js') },
