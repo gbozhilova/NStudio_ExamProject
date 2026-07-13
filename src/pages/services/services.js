@@ -12,6 +12,8 @@ export function afterRender({ root }) {
   translateRoot(root);
 
   const stripEl = root.querySelector('#services-strip');
+  const prevBtn = root.querySelector('#services-strip-prev');
+  const nextBtn = root.querySelector('#services-strip-next');
   const listEl = root.querySelector('#services-list');
   const loadingEl = root.querySelector('#services-loading');
   const titleEl = root.querySelector('#services-category-title');
@@ -101,13 +103,22 @@ export function afterRender({ root }) {
         data-category="${esc(category.id)}"
         role="tab"
         aria-selected="${index === 0 ? 'true' : 'false'}">
-        <span class="category-pill-icon-wrap"><img class="category-pill-image" src="${categoryImageUrl(category)}" alt="${esc(category.name)}"></span>
+        <span class="category-pill-image-frame"><img class="category-pill-image" src="${categoryImageUrl(category)}" alt="${esc(category.name)}"></span>
+        <span class="category-pill-number">${String(index + 1).padStart(2, '0')}</span>
         <span class="category-pill-copy">
           <span class="category-pill-label">${esc(categoryLabel(category.name))}</span>
-          <span class="category-pill-count">${serviceCounts.get(category.id) ?? 0}</span>
         </span>
       </button>
     `).join('');
+
+    const scrollStrip = (direction) => {
+      const firstCard = stripEl.querySelector('.category-pill');
+      const cardWidth = firstCard?.getBoundingClientRect().width ?? 180;
+      stripEl.scrollBy({ left: direction * (cardWidth + 16), behavior: 'smooth' });
+    };
+
+    prevBtn?.addEventListener('click', () => scrollStrip(-1));
+    nextBtn?.addEventListener('click', () => scrollStrip(1));
 
     const activateCategory = (category) => {
       stripEl.querySelectorAll('.category-pill').forEach((pill) => {

@@ -16,15 +16,23 @@
     </div>
   </header>
 
-  <section class="page-panel rounded-4 p-3 p-lg-4 mb-4">
-    <div class="d-flex align-items-center justify-content-between gap-3 mb-3">
+  <section class="page-panel rounded-4 p-3 p-lg-4 mb-4 services-category-section">
+    <div class="d-flex align-items-center justify-content-between gap-3 mb-3 flex-wrap">
       <div>
         <div class="small text-light-muted text-uppercase letter-spaced mb-1">Categories</div>
-        <h2 class="h4 mb-0">Browse by strip</h2>
+        <h2 class="h4 mb-0" data-i18n="services.browseStrip">Browse by strip</h2>
       </div>
       <div id="services-category-count" class="small text-light-muted"></div>
     </div>
-    <div id="services-strip" class="nav nav-pills flex-nowrap overflow-auto service-strip gap-2" role="tablist" aria-label="Service categories"></div>
+    <div class="services-strip-shell">
+      <button id="services-strip-prev" type="button" class="btn btn-sm btn-outline-secondary services-strip-nav" aria-label="Previous categories">
+        <i class="bi bi-chevron-left"></i>
+      </button>
+      <div id="services-strip" class="services-strip" role="tablist" aria-label="Service categories"></div>
+      <button id="services-strip-next" type="button" class="btn btn-sm btn-outline-secondary services-strip-nav" aria-label="Next categories">
+        <i class="bi bi-chevron-right"></i>
+      </button>
+    </div>
   </section>
 
   <section class="page-panel rounded-4 p-4 p-lg-5">
@@ -34,7 +42,7 @@
         <h2 id="services-category-title" class="display-6 fw-bold mb-1">Loading…</h2>
         <p id="services-category-copy" class="mb-0 text-light-muted">Fetching services from Supabase.</p>
       </div>
-      <a href="/booking" data-nav-link class="btn btn-primary btn-lg px-4">Book Now</a>
+      <a href="/booking" data-nav-link class="btn btn-primary btn-lg px-4" data-i18n="nav.booking">Book Now</a>
     </div>
 
     <div id="services-loading" class="text-center py-5">

@@ -1,4 +1,4 @@
-﻿export const APP_NAME = 'NStudio Salon';
+﻿export const APP_NAME = 'NStudio Салон';
 export const DEFAULT_LOCALE = 'en';
 export const SUPPORTED_LOCALES = ['bg', 'en'];
 export const SALON_LOCATIONS = [
