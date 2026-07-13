@@ -1,3 +1,202 @@
-.page-panel {
-  background: rgba(255, 255, 255, 0.92);
+.services-page {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.services-hero {
+  position: relative;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at top right, rgba(49, 195, 176, 0.12), transparent 24%),
+    radial-gradient(circle at bottom left, rgba(216, 180, 138, 0.16), transparent 28%),
+    rgba(10, 11, 14, 0.82);
+}
+
+.services-hero::before {
+  content: 'Services';
+  position: absolute;
+  right: 1.5rem;
+  top: -0.25rem;
+  font-family: 'Cormorant Garamond', Georgia, serif;
+  font-size: clamp(4rem, 12vw, 8rem);
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  color: rgba(245, 237, 228, 0.06);
+  pointer-events: none;
+}
+
+.services-hero-copy {
+  max-width: 56rem;
+}
+
+.services-kicker {
+  font-size: clamp(1.9rem, 4vw, 3rem);
+  color: #f5ede4;
+}
+
+.services-intro,
+.services-hero-note {
+  color: rgba(245, 237, 228, 0.82);
+}
+
+.services-note-card {
+  max-width: 24rem;
+  margin-left: auto;
+  padding: 1.1rem 1.2rem;
+  border-radius: 1.1rem;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(232, 216, 194, 0.14);
+}
+
+.letter-spaced {
+  letter-spacing: 0.14em;
+}
+
+.service-strip {
+  padding-bottom: 0.2rem;
+  scrollbar-width: thin;
+}
+
+.service-strip::-webkit-scrollbar {
+  height: 0.45rem;
+}
+
+.service-strip::-webkit-scrollbar-thumb {
+  background: rgba(49, 195, 176, 0.45);
+  border-radius: 999px;
+}
+
+.category-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.65rem;
+  flex: 0 0 auto;
+  border-radius: 999px !important;
+  padding: 0.8rem 1rem;
+  border: 1px solid rgba(232, 216, 194, 0.16) !important;
+  background: rgba(255, 255, 255, 0.03) !important;
+  color: #f5ede4 !important;
+  transition: transform 180ms ease, background 180ms ease, border-color 180ms ease;
+}
+
+.category-pill:hover {
+  transform: translateY(-1px);
+  border-color: rgba(49, 195, 176, 0.5) !important;
+}
+
+.category-pill.active {
+  background: linear-gradient(135deg, rgba(49, 195, 176, 0.96), rgba(39, 146, 134, 0.96)) !important;
+  color: #071315 !important;
+  border-color: transparent !important;
+}
+
+.category-pill-icon {
+  width: 2rem;
+  height: 2rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.12);
+  font-size: 0.95rem;
+}
+
+.category-pill.active .category-pill-icon {
+  background: rgba(7, 19, 21, 0.12);
+}
+
+.category-pill-label {
+  font-family: 'Cormorant Garamond', Georgia, serif;
+  font-size: 1.18rem;
+  font-weight: 700;
+}
+
+.category-pill-count {
+  min-width: 1.65rem;
+  height: 1.65rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  font-size: 0.74rem;
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.category-pill.active .category-pill-count {
+  background: rgba(7, 19, 21, 0.12);
+}
+
+.service-card-shell {
+  animation: serviceFadeUp 520ms ease both;
+}
+
+.service-card {
+  display: flex;
+  gap: 1rem;
+  padding: 1.1rem;
+  border-radius: 1.2rem;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(232, 216, 194, 0.12);
+  box-shadow: 0 16px 32px rgba(0, 0, 0, 0.12);
+}
+
+.service-card-icon {
+  width: 3rem;
+  height: 3rem;
+  flex: 0 0 3rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 1rem;
+  background: linear-gradient(135deg, rgba(49, 195, 176, 0.18), rgba(216, 180, 138, 0.18));
+  color: #f5ede4;
+  font-size: 1.2rem;
+}
+
+.service-card-body {
+  flex: 1;
+}
+
+.service-card-category {
+  color: rgba(245, 237, 228, 0.62);
+}
+
+.service-price {
+  align-self: flex-start;
+  background: rgba(49, 195, 176, 0.14);
+  color: #9ef0e3;
+  border: 1px solid rgba(49, 195, 176, 0.18);
+}
+
+.service-desc {
+  color: rgba(245, 237, 228, 0.76);
+}
+
+.badge-soft {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(232, 216, 194, 0.12);
+  color: #f5ede4;
+}
+
+@keyframes serviceFadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (max-width: 575.98px) {
+  .services-note-card {
+    margin-left: 0;
+  }
+
+  .service-card {
+    flex-direction: column;
+  }
 }

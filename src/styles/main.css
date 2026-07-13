@@ -1,12 +1,15 @@
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Dancing+Script:wght@400;500;600;700&display=swap');
+
 :root {
   color-scheme: light;
-  --app-bg-start: #f8fafc;
-  --app-bg-end: #eef2ff;
-  --surface: rgba(255, 255, 255, 0.86);
-  --surface-strong: rgba(255, 255, 255, 0.96);
-  --text-strong: #0f172a;
-  --text-soft: #475569;
-  --accent: #7c3aed;
+  --app-bg-start: #08090b;
+  --app-bg-end: #121417;
+  --surface: rgba(255, 255, 255, 0.08);
+  --surface-strong: rgba(255, 255, 255, 0.95);
+  --text-strong: #f5ede4;
+  --text-soft: #c8b9a6;
+  --accent: #31c3b0;
+  --accent-warm: #d8b48a;
 }
 
 html,
@@ -16,10 +19,10 @@ body {
 
 body {
   margin: 0;
-  font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-family: 'Inter', 'Segoe UI', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
   background:
-    radial-gradient(circle at top left, rgba(124, 58, 237, 0.12), transparent 32%),
-    radial-gradient(circle at top right, rgba(14, 165, 233, 0.12), transparent 26%),
+    radial-gradient(circle at top left, rgba(49, 195, 176, 0.14), transparent 30%),
+    radial-gradient(circle at top right, rgba(216, 180, 138, 0.16), transparent 26%),
     linear-gradient(180deg, var(--app-bg-start), var(--app-bg-end));
   color: var(--text-strong);
 }
@@ -39,8 +42,9 @@ a {
 }
 
 .page-panel {
-  background: var(--surface-strong);
-  border: 1px solid rgba(148, 163, 184, 0.2);
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(232, 216, 194, 0.14);
+  backdrop-filter: blur(14px);
 }
 
 .site-header,
@@ -54,7 +58,58 @@ a {
 }
 
 .btn-outline-light {
-  border-color: rgba(255, 255, 255, 0.32);
+  border-color: rgba(232, 216, 194, 0.28);
+  color: #f5ede4;
+}
+
+.btn-success,
+.btn-primary {
+  background: linear-gradient(135deg, #31c3b0, #279286);
+  border-color: #31c3b0;
+  color: #071315;
+}
+
+.btn-success:hover,
+.btn-primary:hover {
+  background: linear-gradient(135deg, #2ab5a4, #237f74);
+  border-color: #2ab5a4;
+  color: #061012;
+}
+
+.btn-warning {
+  background: linear-gradient(135deg, #d8b48a, #c58d61);
+  border-color: #d8b48a;
+  color: #15110c;
+}
+
+.btn-outline-secondary {
+  border-color: rgba(232, 216, 194, 0.24);
+  color: #f5ede4;
+}
+
+.btn-outline-secondary:hover {
+  background: #f5ede4;
+  color: #111;
+}
+
+.display-5,
+.display-4,
+.display-6,
+.section-title {
+  font-family: 'Cormorant Garamond', Georgia, 'Times New Roman', serif;
+  letter-spacing: 0.02em;
+}
+
+.script-font {
+  font-family: 'Dancing Script', 'Brush Script MT', cursive;
+}
+
+.text-light-muted {
+  color: rgba(245, 237, 228, 0.78) !important;
+}
+
+.glow-accent {
+  text-shadow: 0 0 22px rgba(49, 195, 176, 0.18);
 }
 
 @media (max-width: 991.98px) {

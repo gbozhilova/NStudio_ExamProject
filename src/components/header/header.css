@@ -1,42 +1,69 @@
 .site-header {
-  background: rgba(15, 23, 42, 0.92);
-  backdrop-filter: blur(12px);
+  background:
+    linear-gradient(180deg, rgba(7, 8, 10, 0.95), rgba(14, 17, 21, 0.9)),
+    radial-gradient(circle at top right, rgba(49, 195, 176, 0.15), transparent 28%);
+  backdrop-filter: blur(16px);
+  border-color: rgba(232, 216, 194, 0.14) !important;
 }
 
 .brand {
-  color: #f8fafc;
+  color: var(--text-strong);
 }
 
 .brand:hover,
 .brand:focus-visible {
-  color: #ffffff;
+  color: #f6efe6;
 }
 
-.brand-mark {
-  width: 2.5rem;
-  height: 2.5rem;
-  background: linear-gradient(135deg, #d946ef, #22c55e);
-  color: #fff;
-  font-weight: 700;
-  letter-spacing: 0.04em;
+.brand-logo {
+  width: 4.5rem;
+  height: auto;
+  object-fit: contain;
+}
+
+.brand-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+
+.brand-name {
+  color: #f5ede4;
+  letter-spacing: 0.02em;
 }
 
 .brand-tagline {
   font-size: 0.8rem;
+  color: rgba(232, 216, 194, 0.78) !important;
 }
 
 .main-nav .nav-pill {
-  border-color: rgba(255, 255, 255, 0.25);
-  color: #e2e8f0;
+  border-color: rgba(232, 216, 194, 0.22);
+  color: #f5ede4;
+  background: rgba(255, 255, 255, 0.02);
 }
 
 .main-nav .nav-pill:hover,
 .main-nav .nav-pill.active {
-  background: #ffffff;
-  color: #0f172a;
-  border-color: #ffffff;
+  background: #f5ede4;
+  color: #141414;
+  border-color: #f5ede4;
 }
 
 .locale-switch .btn {
   min-width: 3rem;
+}
+
+.locale-switch .btn,
+.auth-slot .btn {
+  border-color: rgba(232, 216, 194, 0.22);
+  color: #f5ede4;
+}
+
+.locale-switch .btn.active,
+.locale-switch .btn:hover,
+.auth-slot .btn:hover {
+  background: #31c3b0;
+  border-color: #31c3b0;
+  color: #081013;
 }
