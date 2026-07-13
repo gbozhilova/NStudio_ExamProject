@@ -14,6 +14,12 @@ const CATEGORY_ICONS = {
   default: 'bi-gem'
 };
 
+const CATEGORY_THUMBNAILS = [
+  '/assets/HairCut.jpg',
+  '/assets/Hair%20Service%20More.jpg',
+  '/assets/Festive.jpg'
+];
+
 export function render() {
   return template;
 }
@@ -43,6 +49,14 @@ export function afterRender({ root }) {
     return String(category ?? '').replace(/[_-]+/g, ' ').replace(/\b\w/g, (ch) => ch.toUpperCase());
   }
 
+  function categoryThumbnail(category, index = 0) {
+    const key = String(category ?? '').toLowerCase();
+    if (key.includes('hair') || key.includes('color')) return '/assets/HairCut.jpg';
+    if (key.includes('makeup')) return '/assets/Hair%20Service%20More.jpg';
+    if (key.includes('nail')) return '/assets/Festive.jpg';
+    return CATEGORY_THUMBNAILS[index % CATEGORY_THUMBNAILS.length];
+  }
+
   function renderServices(category, services) {
     const filtered = services.filter((service) => service.category === category);
     titleEl.textContent = categoryLabel(category);
@@ -52,19 +66,24 @@ export function afterRender({ root }) {
     listEl.innerHTML = filtered.map((service, index) => `
       <article class="col-12 col-lg-6 service-card-shell" style="animation-delay:${index * 70}ms">
         <div class="service-card h-100">
-          <div class="service-card-icon">
-            <i class="bi ${categoryIcon(service.category)}"></i>
+          <div class="service-card-thumb-wrap">
+            <div class="service-card-thumb-frame">
+              <img class="service-card-thumb" src="${categoryThumbnail(service.category, index)}" alt="${esc(service.service_name)}" />
+            </div>
+            <div class="service-card-badge">
+              <i class="bi ${categoryIcon(service.category)}"></i>
+            </div>
           </div>
           <div class="service-card-body">
-            <div class="d-flex align-items-start justify-content-between gap-3 mb-2">
+            <div class="d-flex align-items-start justify-content-between gap-3 mb-3">
               <div>
                 <div class="service-card-category text-uppercase letter-spaced small">${esc(service.category)}</div>
                 <h3 class="h5 mb-1">${esc(service.service_name)}</h3>
               </div>
               <span class="service-price badge rounded-pill">${fmtPrice(service.price)}</span>
             </div>
-            ${service.service_description ? `<p class="service-desc mb-3">${esc(service.service_description)}</p>` : ''}
-            <div class="d-flex flex-wrap gap-2 align-items-center">
+            ${service.service_description ? `<p class="service-desc mb-4">${esc(service.service_description)}</p>` : ''}
+            <div class="d-flex flex-wrap gap-2 align-items-center service-card-meta">
               <span class="badge badge-soft"><i class="bi bi-clock me-1"></i>${service.service_duration_minutes} min</span>
               <a href="/booking" data-nav-link class="btn btn-sm btn-primary ms-auto">Book service</a>
             </div>
