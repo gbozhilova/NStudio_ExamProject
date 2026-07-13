@@ -6,9 +6,9 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-function json(body: unknown, status = 200) {
+function ok(body: unknown) {
   return new Response(JSON.stringify(body), {
-    status, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+    status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
   });
 }
 
@@ -25,7 +25,7 @@ serve(async (req) => {
       await req.json();
 
     if (!email || !serviceId || !bookingDate || !bookingTime) {
-      return json({ error: 'email, serviceId, bookingDate and bookingTime are required' }, 400);
+      return ok({ error: 'email, serviceId, bookingDate and bookingTime are required' });
     }
 
     // Find or create user
@@ -43,7 +43,7 @@ serve(async (req) => {
         email_confirm: true,
         user_metadata: { full_name: fullName ?? email.split('@')[0] }
       });
-      if (createError) return json({ error: createError.message }, 400);
+      if (createError) return ok({ error: createError.message });
       userId = newUser.user.id;
 
       // Assign customer role
@@ -87,7 +87,7 @@ serve(async (req) => {
         .eq('id', modifyBookingId)
         .select('id')
         .single();
-      if (error) return json({ error: error.message }, 400);
+      if (error) return ok({ error: error.message });
       bookingId = data.id;
     } else {
       // Create new booking
@@ -102,7 +102,7 @@ serve(async (req) => {
         notes: notes ?? null,
         status: 'pending'
       }).select('id').single();
-      if (error) return json({ error: error.message }, 400);
+      if (error) return ok({ error: error.message });
       bookingId = data.id;
     }
 
@@ -162,9 +162,9 @@ serve(async (req) => {
       });
     }
 
-    return json({ bookingId, userId, modifyUrl });
+    return ok({ bookingId, userId, modifyUrl });
 
   } catch (err) {
-    return json({ error: String(err) }, 500);
+    return ok({ error: String(err) });
   }
 });

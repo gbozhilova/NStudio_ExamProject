@@ -145,29 +145,68 @@ export function afterRender({ root }) {
   }
 
   function openEditUser(userId, user) {
+    const isStaff = (user.user_roles ?? []).some((r) => ['staff', 'admin'].includes(r.role));
     const avatarPreview = user.avatar_url
       ? `<img id="eu-avatar-preview" src="${escapeHtml(user.avatar_url)}" class="rounded-circle mb-2" style="width:64px;height:64px;object-fit:cover">`
       : `<div id="eu-avatar-preview" class="rounded-circle bg-secondary d-flex align-items-center justify-content-center mb-2 text-white fw-bold" style="width:64px;height:64px;font-size:1.2rem">${(user.full_name ?? '?')[0].toUpperCase()}</div>`;
 
-    const body = `
-      <div id="modal-error" class="alert alert-danger d-none"></div>
-      <div class="mb-3"><label class="form-label">${t('auth.register.name')}</label>
-        <input id="eu-name" class="form-control" value="${escapeHtml(user.full_name ?? '')}" /></div>
-      <div class="mb-3"><label class="form-label">${t('customers.col.phone')}</label>
-        <input id="eu-phone" class="form-control" value="${escapeHtml(user.phone ?? '')}" /></div>
-      <div class="mb-3"><label class="form-label">${t('admin.col.role')}</label>
-        <select id="eu-role" class="form-select">
-          <option value="customer" ${(user.user_roles?.[0]?.role ?? 'customer') === 'customer' ? 'selected' : ''}>customer</option>
-          <option value="staff" ${(user.user_roles?.[0]?.role) === 'staff' ? 'selected' : ''}>staff</option>
-          <option value="admin" ${(user.user_roles?.[0]?.role) === 'admin' ? 'selected' : ''}>admin</option>
-        </select></div>
-      <div class="mb-3">
-        <label class="form-label">${t('admin.col.avatar')}</label>
-        <div>${avatarPreview}</div>
-        <input id="eu-avatar" type="file" class="form-control form-control-sm" accept="image/*" />
-      </div>`;
+    // Fetch extended profile data
+    supabase.from('profiles').select('hair_type, skin_type, allergy_notes, bio, specialties, working_hours').eq('id', userId).single()
+      .then(({ data: p }) => {
+        const wh = p?.working_hours ?? {};
+        const days = ['mon','tue','wed','thu','fri','sat','sun'];
+        const dayLabels = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
 
-    openModal(t('customers.edit.heading'), body,
+        const staffFields = isStaff ? `
+          <hr class="my-3" /><p class="fw-semibold small mb-2">Staff details</p>
+          <div class="mb-2"><label class="form-label small">Bio</label>
+            <textarea id="eu-bio" class="form-control form-control-sm" rows="2">${escapeHtml(p?.bio ?? '')}</textarea></div>
+          <div class="mb-2"><label class="form-label small">Specialties <small class="text-muted">(comma-separated)</small></label>
+            <input id="eu-spec" class="form-control form-control-sm" value="${escapeHtml((p?.specialties ?? []).join(', '))}" placeholder="color, highlights, balayage…" /></div>
+          <div class="mb-0"><label class="form-label small">Working hours</label>
+            <table class="table table-sm table-bordered mb-0" style="font-size:0.78rem">
+              <thead class="table-light"><tr><th>Day</th><th>Active</th><th>From</th><th>To</th></tr></thead>
+              <tbody>${days.map((d, i) => {
+                const dh = wh[d] ?? { active: i < 5, start: '09:00', end: '18:00' };
+                return `<tr>
+                  <td>${dayLabels[i]}</td>
+                  <td class="text-center"><input type="checkbox" class="form-check-input wh-active" data-day="${d}" ${dh.active ? 'checked' : ''}></td>
+                  <td><input type="time" class="form-control form-control-sm p-0 wh-start" data-day="${d}" value="${dh.start ?? '09:00'}" style="min-width:90px"></td>
+                  <td><input type="time" class="form-control form-control-sm p-0 wh-end" data-day="${d}" value="${dh.end ?? '18:00'}" style="min-width:90px"></td>
+                </tr>`;
+              }).join('')}</tbody>
+            </table></div>` : `
+          <hr class="my-3" /><p class="fw-semibold small mb-2">Customer notes</p>
+          <div class="mb-2"><label class="form-label small">Hair type</label>
+            <input id="eu-hair" class="form-control form-control-sm" value="${escapeHtml(p?.hair_type ?? '')}" /></div>
+          <div class="mb-2"><label class="form-label small">Skin type</label>
+            <input id="eu-skin" class="form-control form-control-sm" value="${escapeHtml(p?.skin_type ?? '')}" /></div>
+          <div class="mb-0"><label class="form-label small">Allergy / health notes</label>
+            <textarea id="eu-allergy" class="form-control form-control-sm" rows="2">${escapeHtml(p?.allergy_notes ?? '')}</textarea></div>`;
+
+        const body = `
+          <div id="modal-error" class="alert alert-danger d-none"></div>
+          <div class="mb-3"><label class="form-label">${t('auth.register.name')}</label>
+            <input id="eu-name" class="form-control" value="${escapeHtml(user.full_name ?? '')}" /></div>
+          <div class="mb-3"><label class="form-label">${t('customers.col.phone')}</label>
+            <input id="eu-phone" class="form-control" value="${escapeHtml(user.phone ?? '')}" /></div>
+          <div class="mb-3"><label class="form-label">${t('admin.col.role')}</label>
+            <select id="eu-role" class="form-select">
+              <option value="customer" ${(user.user_roles?.[0]?.role ?? 'customer') === 'customer' ? 'selected' : ''}>customer</option>
+              <option value="staff" ${(user.user_roles?.[0]?.role) === 'staff' ? 'selected' : ''}>staff</option>
+              <option value="admin" ${(user.user_roles?.[0]?.role) === 'admin' ? 'selected' : ''}>admin</option>
+            </select></div>
+          <div class="mb-3">
+            <label class="form-label">${t('admin.col.avatar')}</label>
+            <div>${avatarPreview}</div>
+            <input id="eu-avatar" type="file" class="form-control form-control-sm" accept="image/*" />
+          </div>
+          ${staffFields}`;
+
+        modalBody.innerHTML = body;
+      });
+
+    openModal(t('customers.edit.heading'), '<div class="text-center py-3"><div class="spinner-border spinner-border-sm"></div></div>',
       `<button class="btn btn-secondary" data-bs-dismiss="modal">${t('modal.close')}</button>
        <button id="modal-save" class="btn btn-primary">
          <span>${t('customers.edit.save')}</span>
@@ -180,41 +219,46 @@ export function afterRender({ root }) {
         const name = modalBody.querySelector('#eu-name').value.trim();
         const phone = modalBody.querySelector('#eu-phone').value.trim();
         const role = modalBody.querySelector('#eu-role').value;
-        const avatarFile = modalBody.querySelector('#eu-avatar').files[0];
+        const avatarFile = modalBody.querySelector('#eu-avatar')?.files[0];
 
         if (!name) { errEl.textContent = t('auth.error.requiredFields'); errEl.classList.remove('d-none'); return; }
 
-        saveBtn.disabled = true;
-        spinner.classList.remove('d-none');
-        errEl.classList.add('d-none');
+        saveBtn.disabled = true; spinner.classList.remove('d-none'); errEl.classList.add('d-none');
 
         try {
           let avatarUrl = user.avatar_url ?? null;
-          if (avatarFile) {
-            const path = avatarPath(userId, avatarFile.name);
-            await uploadFile(BUCKETS.AVATARS, path, avatarFile);
-            avatarUrl = getPublicUrl(BUCKETS.AVATARS, path);
+          if (avatarFile) { const path = avatarPath(userId, avatarFile.name); await uploadFile(BUCKETS.AVATARS, path, avatarFile); avatarUrl = getPublicUrl(BUCKETS.AVATARS, path); }
+
+          const updates = { full_name: name, phone: phone || null, avatar_url: avatarUrl, updated_at: new Date().toISOString() };
+
+          if (isStaff) {
+            const specRaw = modalBody.querySelector('#eu-spec')?.value ?? '';
+            updates.bio = modalBody.querySelector('#eu-bio')?.value.trim() || null;
+            updates.specialties = specRaw ? specRaw.split(',').map((s) => s.trim()).filter(Boolean) : null;
+            const wh = {};
+            ['mon','tue','wed','thu','fri','sat','sun'].forEach((d) => {
+              wh[d] = {
+                active: modalBody.querySelector(`.wh-active[data-day="${d}"]`)?.checked ?? false,
+                start: modalBody.querySelector(`.wh-start[data-day="${d}"]`)?.value ?? '09:00',
+                end: modalBody.querySelector(`.wh-end[data-day="${d}"]`)?.value ?? '18:00'
+              };
+            });
+            updates.working_hours = wh;
+          } else {
+            updates.hair_type = modalBody.querySelector('#eu-hair')?.value.trim() || null;
+            updates.skin_type = modalBody.querySelector('#eu-skin')?.value.trim() || null;
+            updates.allergy_notes = modalBody.querySelector('#eu-allergy')?.value.trim() || null;
           }
 
-          await supabase.from('profiles').update({
-            full_name: name,
-            phone: phone || null,
-            avatar_url: avatarUrl,
-            updated_at: new Date().toISOString()
-          }).eq('id', userId);
-
+          await supabase.from('profiles').update(updates).eq('id', userId);
           await supabase.from('user_roles').delete().eq('user_id', userId);
           await supabase.from('user_roles').insert({ user_id: userId, role });
 
-          bsModal.hide();
-          showAlert(t('customers.edit.success'));
-          panes.users = false;
-          loadUsers();
+          bsModal.hide(); showAlert(t('customers.edit.success'));
+          panes.users = false; loadUsers();
         } catch (err) {
-          errEl.textContent = err.message;
-          errEl.classList.remove('d-none');
-          saveBtn.disabled = false;
-          spinner.classList.add('d-none');
+          errEl.textContent = err.message; errEl.classList.remove('d-none');
+          saveBtn.disabled = false; spinner.classList.add('d-none');
         }
       });
   }

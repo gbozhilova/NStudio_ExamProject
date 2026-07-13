@@ -3,8 +3,8 @@ import { renderHeader, bindHeaderInteractions } from './components/header/header
 import { renderFooter } from './components/footer/footer.js';
 import { getLocale, setLocale, translateRoot, t } from './services/i18n.js';
 import { normalizePath, resolveRoute, isInternalPath, getRequiredRoles } from './router/routes.js';
-import { getSession, getUserRoles, onAuthStateChange } from './services/auth.js';
-import { setSession, clearSession, isAuthenticated, hasAnyRole, getUser } from './services/session.js';
+import { getUserRoles, onAuthStateChange } from './services/auth.js';
+import { setSession, clearSession, isAuthenticated, hasAnyRole, getUser, getRoles } from './services/session.js';
 
 const APP_ROOT_SELECTOR = '#app';
 
@@ -36,7 +36,7 @@ async function renderRoute(pathname = window.location.pathname) {
         <div id="site-footer"></div>
       </div>
     `;
-    root.querySelector('#site-header').innerHTML = renderHeader(route.path, getLocale(), getUser());
+    root.querySelector('#site-header').innerHTML = renderHeader(route.path, getLocale(), getUser(), getRoles());
     root.querySelector('#site-footer').innerHTML = renderFooter();
     bindHeaderInteractions(root.querySelector('#site-header'), {
       currentPath: route.path,
@@ -60,7 +60,7 @@ async function renderRoute(pathname = window.location.pathname) {
   const contentSlot = root.querySelector('#site-content');
   const footerSlot = root.querySelector('#site-footer');
 
-  headerSlot.innerHTML = renderHeader(route.path, getLocale(), getUser());
+  headerSlot.innerHTML = renderHeader(route.path, getLocale(), getUser(), getRoles());
   contentSlot.innerHTML = pageModule.render({ locale: getLocale(), location: DEFAULT_LOCATION });
   footerSlot.innerHTML = renderFooter();
 
@@ -94,45 +94,41 @@ export async function bootApp() {
   setLocale(getLocale());
   document.documentElement.lang = getLocale();
 
-  // Hydrate session from existing Supabase session
-  try {
-    const { session } = await getSession();
-    if (session) {
-      const roles = await getUserRoles(session.user.id);
-      setSession(session, roles);
-    }
-  } catch {
-    // No active session — continue as guest
-  }
-
-  // Keep session state in sync with Supabase auth events
-  onAuthStateChange(async (event, session) => {
-    // INITIAL_SESSION is handled by the explicit getSession() call above
-    if (event === 'INITIAL_SESSION') return;
-    if (session) {
-      const roles = await getUserRoles(session.user.id);
-      setSession(session, roles);
-    } else {
-      clearSession();
-    }
-    await renderRoute(window.location.pathname);
-  });
-
+  // Set up navigation listeners first
   document.addEventListener('click', (event) => {
     const link = event.target.closest('a[data-nav-link]');
-    if (!link) {
-      return;
-    }
+    if (!link) return;
     const targetPath = new URL(link.href, window.location.origin).pathname;
-    if (!isInternalPath(targetPath)) {
-      return;
-    }
+    if (!isInternalPath(targetPath)) return;
     event.preventDefault();
     navigate(targetPath);
   });
 
   window.addEventListener('popstate', () => {
     renderRoute(window.location.pathname);
+  });
+
+  // Wait for INITIAL_SESSION so roles are populated before the first render
+  await new Promise((resolve) => {
+    onAuthStateChange(async (event, session) => {
+      if (session) {
+        try {
+          const roles = await getUserRoles(session.user.id);
+          setSession(session, roles);
+        } catch {
+          setSession(session, []);
+        }
+      } else {
+        clearSession();
+      }
+
+      if (event === 'INITIAL_SESSION') {
+        resolve(); // initial state ready — proceed to first render
+      } else {
+        // Subsequent sign-in / sign-out events re-render
+        renderRoute(window.location.pathname);
+      }
+    });
   });
 
   renderRoute(window.location.pathname);

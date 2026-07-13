@@ -2,8 +2,10 @@
 
   <div class="row g-4">
 
-    <!-- Profile card -->
+    <!-- ── Left column: profile card + preferences ── -->
     <div class="col-12 col-md-4">
+
+      <!-- Profile card -->
       <div class="card shadow-sm">
         <div class="card-body text-center p-4">
           <div id="profile-avatar-wrap" class="mb-3"></div>
@@ -15,7 +17,7 @@
         </div>
       </div>
 
-      <!-- Edit form (hidden by default) -->
+      <!-- Edit form -->
       <div id="profile-edit-form" class="card shadow-sm mt-3 d-none">
         <div class="card-body p-4">
           <h3 class="h6 fw-bold mb-3" data-i18n="profile.edit">Edit Profile</h3>
@@ -42,9 +44,53 @@
           </div>
         </div>
       </div>
+
+      <!-- Beauty preferences card -->
+      <div class="card shadow-sm mt-3">
+        <div class="card-body p-4">
+          <h3 class="h6 fw-bold mb-3">
+            <i class="bi bi-stars me-1"></i><span data-i18n="profile.preferences">My Preferences</span>
+          </h3>
+          <div id="prefs-view">
+            <dl class="row mb-2 small" id="prefs-dl"></dl>
+            <button id="prefs-edit-btn" class="btn btn-sm btn-outline-secondary">
+              <i class="bi bi-pencil me-1"></i><span data-i18n="profile.edit">Edit</span>
+            </button>
+          </div>
+          <div id="prefs-form" class="d-none">
+            <div id="prefs-error" class="alert alert-danger d-none"></div>
+            <div class="mb-2">
+              <label class="form-label small" data-i18n="profile.hairType">Hair type</label>
+              <input id="pref-hair" type="text" class="form-control form-control-sm" placeholder="e.g. curly, fine, colour-treated" />
+            </div>
+            <div class="mb-2">
+              <label class="form-label small" data-i18n="profile.skinType">Skin type</label>
+              <input id="pref-skin" type="text" class="form-control form-control-sm" placeholder="e.g. sensitive, dry, oily" />
+            </div>
+            <div class="mb-2">
+              <label class="form-label small" data-i18n="profile.allergies">Allergy / health notes</label>
+              <textarea id="pref-allergy" class="form-control form-control-sm" rows="2" placeholder="Allergies, medications, conditions…"></textarea>
+            </div>
+            <div class="mb-3">
+              <label class="form-label small" data-i18n="profile.preferredStaff">Preferred stylist</label>
+              <select id="pref-staff" class="form-select form-select-sm">
+                <option value="">No preference</option>
+              </select>
+            </div>
+            <div class="d-flex gap-2">
+              <button id="prefs-save-btn" class="btn btn-primary btn-sm flex-grow-1">
+                <span data-i18n="customers.edit.save">Save</span>
+                <span class="spinner-border spinner-border-sm d-none ms-1"></span>
+              </button>
+              <button id="prefs-cancel-btn" class="btn btn-secondary btn-sm">Cancel</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
     </div>
 
-    <!-- Bookings -->
+    <!-- ── Right column: bookings + favorites ── -->
     <div class="col-12 col-md-8">
 
       <!-- Upcoming -->
@@ -57,7 +103,25 @@
       <div id="profile-past-loading" class="text-center py-3"><div class="spinner-border spinner-border-sm text-primary"></div></div>
       <div id="profile-past-list"></div>
 
+      <!-- Favorites -->
+      <h3 class="h5 fw-bold mb-3 mt-4">
+        <i class="bi bi-heart-fill text-danger me-2"></i><span data-i18n="profile.favorites">Favourite Services</span>
+      </h3>
+      <div id="profile-favorites-loading" class="text-center py-3"><div class="spinner-border spinner-border-sm text-primary"></div></div>
+      <div id="profile-favorites-list"></div>
+
+      <!-- Browse services to add favorites -->
+      <div class="mt-3">
+        <button id="browse-services-btn" class="btn btn-sm btn-outline-secondary" data-i18n="profile.browseServices">
+          <i class="bi bi-plus me-1"></i>Browse services to add favourites
+        </button>
+      </div>
+      <div id="browse-services-panel" class="mt-3 d-none">
+        <div id="browse-services-list"></div>
+      </div>
+
     </div>
   </div>
 
 </div>
+
