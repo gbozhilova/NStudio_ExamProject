@@ -321,35 +321,41 @@ export function afterRender({ root }) {
     loadEl.classList.remove('d-none');
     tableEl.classList.add('d-none');
 
-    // Two separate queries then merge in JS (no FK between profiles and user_roles)
-    let profileQuery = supabase.from('profiles')
-      .select('id, full_name, phone, created_at, avatar_url')
-      .order('full_name');
-    if (search.trim()) profileQuery = profileQuery.ilike('full_name', `%${search.trim()}%`);
+    // Query users_overview to include auth email, then merge role rows for role badges/editing.
+    const usersQuery = supabase.from('users_overview')
+      .select('id, email, full_name, phone, created_at, avatar_url')
+      .order('created_at', { ascending: false });
 
-    const [{ data: profiles, error: pErr }, { data: roleRows, error: rErr }] = await Promise.all([
-      profileQuery,
+    const [{ data: users, error: uErr }, { data: roleRows, error: rErr }] = await Promise.all([
+      usersQuery,
       supabase.from('user_roles').select('user_id, role')
     ]);
 
     loadEl.classList.add('d-none');
     tableEl.classList.remove('d-none');
 
-    if (pErr || rErr) { showAlert((pErr || rErr).message, 'danger'); return; }
+    if (uErr || rErr) { showAlert((uErr || rErr).message, 'danger'); return; }
 
     const roleMap = {};
     for (const r of roleRows ?? []) {
       if (!roleMap[r.user_id]) roleMap[r.user_id] = [];
       roleMap[r.user_id].push(r.role);
     }
-    const data = (profiles ?? []).map((p) => ({
-      ...p,
-      user_roles: (roleMap[p.id] ?? []).map((role) => ({ role }))
+    const term = search.trim().toLowerCase();
+    const filteredUsers = term
+      ? (users ?? []).filter((u) =>
+        String(u.full_name ?? '').toLowerCase().includes(term)
+        || String(u.email ?? '').toLowerCase().includes(term))
+      : (users ?? []);
+
+    const data = filteredUsers.map((u) => ({
+      ...u,
+      user_roles: (roleMap[u.id] ?? []).map((role) => ({ role }))
     }));
 
     const tbody = root.querySelector('#admin-users-tbody');
     if (!data.length) {
-      tbody.innerHTML = `<tr><td colspan="5" class="text-center text-muted py-4">${t('customers.empty')}</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="6" class="text-center text-muted py-4">${t('customers.empty')}</td></tr>`;
       return;
     }
 
@@ -360,6 +366,7 @@ export function afterRender({ root }) {
         : `<span class="rounded-circle bg-secondary d-inline-flex align-items-center justify-content-center me-2 text-white" style="width:32px;height:32px;font-size:0.7rem">${escapeHtml((u.full_name ?? '?')[0].toUpperCase())}</span>`;
       return `<tr>
         <td><div class="d-flex align-items-center">${avatar}<span class="fw-semibold">${escapeHtml(u.full_name ?? '—')}</span></div></td>
+        <td class="text-muted">${escapeHtml(u.email ?? '—')}</td>
         <td>${roles || roleBadge('—')}</td>
         <td>${escapeHtml(u.phone ?? '—')}</td>
         <td class="text-muted small">${fmt(u.created_at)}</td>
