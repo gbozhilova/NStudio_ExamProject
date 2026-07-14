@@ -187,6 +187,15 @@
   padding: 0 1rem 1rem;
 }
 
+.service-card-body h3 {
+  color: #111827;
+}
+
+.service-card-body .letter-spaced,
+.service-card-body .service-card-category {
+  color: #6d3b7f;
+}
+
 .service-card-category {
   color: #6d3b7f;
 }
