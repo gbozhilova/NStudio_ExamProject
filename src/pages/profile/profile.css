@@ -17,3 +17,9 @@
 }
 
 .booking-card .status-badge { font-size: 0.72rem; }
+
+.profile-booking-file-thumb {
+  width: 36px;
+  height: 36px;
+  object-fit: cover;
+}

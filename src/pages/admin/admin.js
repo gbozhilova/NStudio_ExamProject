@@ -44,12 +44,6 @@ export function afterRender({ root }) {
     return date ? new Date(date).toLocaleDateString() : '—';
   }
 
-  function primaryRole(userRoles = []) {
-    if (userRoles.some((r) => r.role === 'admin')) return 'admin';
-    if (userRoles.some((r) => r.role === 'staff')) return 'staff';
-    return userRoles[0]?.role ?? 'customer';
-  }
-
   function formatErrorMessage(error) {
     if (!error) return t('admin.error.generic');
     if (typeof error === 'string') return error;
@@ -106,9 +100,10 @@ export function afterRender({ root }) {
 
   async function loadCategories() {
     const loadEl = root.querySelector('#admin-categories-loading');
-    const gridEl = root.querySelector('#admin-categories-grid');
+    const tableEl = root.querySelector('#admin-categories-table');
+    const tbody = root.querySelector('#admin-categories-tbody');
     loadEl.classList.remove('d-none');
-    gridEl.classList.add('d-none');
+    tableEl.classList.add('d-none');
 
     const [categories, services, products] = await Promise.all([
       loadCategoryOptions(false),
@@ -117,7 +112,7 @@ export function afterRender({ root }) {
     ]);
 
     loadEl.classList.add('d-none');
-    gridEl.classList.remove('d-none');
+    tableEl.classList.remove('d-none');
 
     const categoriesResult = categories ?? [];
     const serviceCounts = new Map();
@@ -132,46 +127,42 @@ export function afterRender({ root }) {
     }
 
     if (!categoriesResult.length) {
-      gridEl.innerHTML = `<div class="col-12 text-center text-muted py-4">${t('admin.empty')}</div>`;
+      tbody.innerHTML = `<tr><td colspan="6" class="text-center text-muted py-4">${t('admin.empty')}</td></tr>`;
       return;
     }
 
-    gridEl.innerHTML = categoriesResult.map((category) => {
+    tbody.innerHTML = categoriesResult.map((category) => {
       const image = categoryImageUrl(category);
       const serviceCount = serviceCounts.get(category.id) ?? 0;
       const productCount = productCounts.get(category.id) ?? 0;
       const canDelete = serviceCount === 0 && productCount === 0;
       return `
-        <div class="col-12 col-sm-6 col-lg-4 col-xxl-3">
-          <div class="card h-100 category-card">
-            <img src="${escapeHtml(image)}" class="card-img-top category-card-image" alt="${escapeHtml(category.name)}" />
-            <div class="card-body">
-              <div class="d-flex justify-content-between align-items-start gap-2 mb-2">
-                <div>
-                  <div class="small text-light-muted text-uppercase letter-spaced">${t('admin.categories.heading')}</div>
-                  <h3 class="h5 mb-1">${escapeHtml(categoryLabel(category.name))}</h3>
-                </div>
-                <span class="badge ${category.is_active ? 'bg-success' : 'bg-secondary'}">${category.is_active ? '✓' : '✗'}</span>
-              </div>
-              <p class="text-muted small mb-3">${serviceCount} services · ${productCount} products</p>
-              <div class="d-flex flex-wrap gap-2">
-                <button class="btn btn-sm btn-outline-primary" data-action="edit-category" data-id="${category.id}">${t('customers.btn.edit')}</button>
-                <button class="btn btn-sm btn-outline-secondary" data-action="toggle-category" data-id="${category.id}" data-active="${category.is_active ? 'true' : 'false'}">
-                  ${category.is_active ? 'Set inactive' : 'Set active'}
-                </button>
-                <button class="btn btn-sm btn-outline-danger" data-action="delete-category" data-id="${category.id}" ${canDelete ? '' : 'disabled'} title="${canDelete ? 'Delete category' : 'Remove linked services/products first'}">
-                  ${t('customers.btn.delete')}
-                </button>
-              </div>
+        <tr>
+          <td class="fw-semibold">${escapeHtml(categoryLabel(category.name))}</td>
+          <td>
+            <img src="${escapeHtml(image)}" class="admin-category-thumb" alt="${escapeHtml(category.name)}" />
+          </td>
+          <td>${serviceCount}</td>
+          <td>${productCount}</td>
+          <td><span class="badge ${category.is_active ? 'bg-success' : 'bg-secondary'}">${category.is_active ? '✓' : '✗'}</span></td>
+          <td class="text-end">
+            <div class="btn-group btn-group-sm">
+              <button class="btn btn-outline-primary" data-action="edit-category" data-id="${category.id}">${t('customers.btn.edit')}</button>
+              <button class="btn btn-outline-secondary" data-action="toggle-category" data-id="${category.id}" data-active="${category.is_active ? 'true' : 'false'}">
+                ${category.is_active ? 'Set inactive' : 'Set active'}
+              </button>
+              <button class="btn btn-outline-danger" data-action="delete-category" data-id="${category.id}" ${canDelete ? '' : 'disabled'} title="${canDelete ? 'Delete category' : 'Remove linked services/products first'}">
+                ${t('customers.btn.delete')}
+              </button>
             </div>
-          </div>
-        </div>`;
+          </td>
+        </tr>`;
     }).join('');
 
-    gridEl.querySelectorAll('[data-action="edit-category"]').forEach((btn) => {
+    tbody.querySelectorAll('[data-action="edit-category"]').forEach((btn) => {
       btn.addEventListener('click', () => openCategoryForm(btn.dataset.id, categoriesResult.find((c) => c.id === btn.dataset.id)));
     });
-    gridEl.querySelectorAll('[data-action="toggle-category"]').forEach((btn) => {
+    tbody.querySelectorAll('[data-action="toggle-category"]').forEach((btn) => {
       btn.addEventListener('click', () => {
         const category = categoriesResult.find((item) => item.id === btn.dataset.id);
         if (!category) return;
@@ -179,7 +170,7 @@ export function afterRender({ root }) {
         toggleCategoryStatus(category, nextActive);
       });
     });
-    gridEl.querySelectorAll('[data-action="delete-category"]').forEach((btn) => {
+    tbody.querySelectorAll('[data-action="delete-category"]').forEach((btn) => {
       btn.addEventListener('click', () => {
         const category = categoriesResult.find((item) => item.id === btn.dataset.id);
         if (!category) return;
@@ -389,6 +380,7 @@ export function afterRender({ root }) {
 
   function openEditUser(userId, user) {
     const isStaff = (user.user_roles ?? []).some((r) => ['staff', 'admin'].includes(r.role));
+    const hasRole = (role) => (user.user_roles ?? []).some((r) => r.role === role);
     const avatarPreview = user.avatar_url
       ? `<img id="eu-avatar-preview" src="${escapeHtml(user.avatar_url)}" class="rounded-circle mb-2" style="width:64px;height:64px;object-fit:cover">`
       : `<div id="eu-avatar-preview" class="rounded-circle bg-secondary d-flex align-items-center justify-content-center mb-2 text-white fw-bold" style="width:64px;height:64px;font-size:1.2rem">${(user.full_name ?? '?')[0].toUpperCase()}</div>`;
@@ -434,11 +426,21 @@ export function afterRender({ root }) {
           <div class="mb-3"><label class="form-label">${t('customers.col.phone')}</label>
             <input id="eu-phone" class="form-control" value="${escapeHtml(user.phone ?? '')}" /></div>
           <div class="mb-3"><label class="form-label">${t('admin.col.role')}</label>
-            <select id="eu-role" class="form-select">
-              <option value="customer" ${primaryRole(user.user_roles) === 'customer' ? 'selected' : ''}>customer</option>
-              <option value="staff" ${primaryRole(user.user_roles) === 'staff' ? 'selected' : ''}>staff</option>
-              <option value="admin" ${primaryRole(user.user_roles) === 'admin' ? 'selected' : ''}>admin</option>
-            </select></div>
+            <div class="d-flex flex-wrap gap-3 mt-1">
+              <div class="form-check">
+                <input class="form-check-input eu-role-check" type="checkbox" id="eu-role-customer" value="customer" ${hasRole('customer') ? 'checked' : ''}>
+                <label class="form-check-label" for="eu-role-customer">customer</label>
+              </div>
+              <div class="form-check">
+                <input class="form-check-input eu-role-check" type="checkbox" id="eu-role-staff" value="staff" ${hasRole('staff') ? 'checked' : ''}>
+                <label class="form-check-label" for="eu-role-staff">staff</label>
+              </div>
+              <div class="form-check">
+                <input class="form-check-input eu-role-check" type="checkbox" id="eu-role-admin" value="admin" ${hasRole('admin') ? 'checked' : ''}>
+                <label class="form-check-label" for="eu-role-admin">admin</label>
+              </div>
+            </div>
+            <div class="form-text">Select one or more roles for this user.</div></div>
           <div class="mb-3">
             <label class="form-label">${t('admin.col.avatar')}</label>
             <div>${avatarPreview}</div>
@@ -461,10 +463,11 @@ export function afterRender({ root }) {
         const spinner = saveBtn.querySelector('.spinner-border');
         const name = modalBody.querySelector('#eu-name').value.trim();
         const phone = modalBody.querySelector('#eu-phone').value.trim();
-        const role = modalBody.querySelector('#eu-role').value;
+        const selectedRoles = Array.from(modalBody.querySelectorAll('.eu-role-check:checked')).map((input) => input.value);
         const avatarFile = modalBody.querySelector('#eu-avatar')?.files[0];
 
         if (!name) { errEl.textContent = t('auth.error.requiredFields'); errEl.classList.remove('d-none'); return; }
+        if (!selectedRoles.length) { errEl.textContent = 'At least one role must be selected.'; errEl.classList.remove('d-none'); return; }
 
         saveBtn.disabled = true; spinner.classList.remove('d-none'); errEl.classList.add('d-none');
 
@@ -496,7 +499,7 @@ export function afterRender({ root }) {
           await supabase.from('profiles').update(updates).eq('id', userId);
           await supabase.from('user_roles').delete().eq('user_id', userId);
 
-          const rolesToAssign = role === 'staff' ? ['customer', 'staff'] : [role];
+          const rolesToAssign = [...new Set(selectedRoles)];
           await supabase.from('user_roles').insert(
             rolesToAssign.map((currentRole) => ({ user_id: userId, role: currentRole }))
           );
@@ -755,22 +758,29 @@ export function afterRender({ root }) {
     const tableEl = root.querySelector('#admin-products-table');
     loadEl.classList.remove('d-none'); tableEl.classList.add('d-none');
 
-    const { data, error } = await supabase.from('products').select('*').order('category').order('product_name');
+    const [{ data, error }, categories] = await Promise.all([
+      supabase.from('products').select('*').order('category').order('product_name'),
+      loadCategoryOptions(false)
+    ]);
     loadEl.classList.add('d-none'); tableEl.classList.remove('d-none');
     if (error) { showAlert(error.message, 'danger'); return; }
 
+    const categoryById = new Map((categories ?? []).map((category) => [category.id, category]));
+    const categoryByName = new Map((categories ?? []).map((category) => [String(category.name ?? '').toLowerCase(), category]));
+
     const tbody = root.querySelector('#admin-products-tbody');
     if (!data.length) {
-      tbody.innerHTML = `<tr><td colspan="6" class="text-center text-muted py-4">${t('admin.empty')}</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="7" class="text-center text-muted py-4">${t('admin.empty')}</td></tr>`;
       return;
     }
 
     tbody.innerHTML = data.map((p) => {
-      const thumb = p.image_url
-        ? `<img src="${escapeHtml(p.image_url)}" class="rounded me-2" style="width:36px;height:36px;object-fit:cover">`
-        : `<span class="text-muted me-2">—</span>`;
+      const category = categoryById.get(p.category_id) ?? categoryByName.get(String(p.category ?? '').toLowerCase()) ?? p.category;
+      const previewSrc = p.image_url || categoryImageUrl(category);
+      const preview = `<img src="${escapeHtml(previewSrc)}" class="admin-product-thumb" alt="${escapeHtml(p.product_name)}" />`;
       return `<tr>
-        <td><div class="d-flex align-items-center">${thumb}<span class="fw-semibold">${escapeHtml(p.product_name)}</span></div></td>
+        <td class="fw-semibold">${escapeHtml(p.product_name)}</td>
+        <td>${preview}</td>
         <td>${escapeHtml(p.brand)}</td>
         <td><span class="badge bg-light text-dark border">${escapeHtml(p.category)}</span></td>
         <td>${p.stock_quantity}</td>

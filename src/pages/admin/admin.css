@@ -89,3 +89,21 @@
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
+
+.admin-category-thumb {
+  width: 96px;
+  height: 64px;
+  object-fit: cover;
+  border-radius: 0.5rem;
+  border: 1px solid rgba(232, 216, 194, 0.45);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.15);
+}
+
+.admin-product-thumb {
+  width: 96px;
+  height: 64px;
+  object-fit: cover;
+  border-radius: 0.5rem;
+  border: 1px solid rgba(232, 216, 194, 0.45);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.15);
+}

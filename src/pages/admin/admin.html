@@ -59,7 +59,23 @@
       <button class="btn btn-sm btn-success" id="admin-category-add" data-i18n="admin.btn.add">+ Add</button>
     </div>
     <div id="admin-categories-loading" class="text-center py-4"><div class="spinner-border text-primary"></div></div>
-    <div id="admin-categories-grid" class="d-none row g-3"></div>
+    <div id="admin-categories-table" class="d-none">
+      <div class="table-responsive">
+        <table class="table table-hover align-middle">
+          <thead class="table-light">
+            <tr>
+              <th data-i18n="admin.col.name">Name</th>
+              <th>Preview</th>
+              <th>Services</th>
+              <th>Products</th>
+              <th data-i18n="admin.col.active">Active</th>
+              <th class="text-end" data-i18n="customers.col.actions">Actions</th>
+            </tr>
+          </thead>
+          <tbody id="admin-categories-tbody"></tbody>
+        </table>
+      </div>
+    </div>
   </div>
 
   <div id="admin-pane-services" class="admin-pane d-none">
@@ -97,6 +113,7 @@
           <thead class="table-light">
             <tr>
               <th data-i18n="admin.col.name">Name</th>
+              <th>Preview</th>
               <th data-i18n="admin.col.brand">Brand</th>
               <th data-i18n="admin.col.category">Category</th>
               <th data-i18n="admin.col.stock">Stock</th>

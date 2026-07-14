@@ -86,6 +86,14 @@ export function afterRender({ root }) {
     return new Date(d + 'T12:00:00').toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
   }
 
+  function localDateISO() {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  }
+
   function syncPrimaryService() {
     state.service = state.services[0] ?? null;
   }
@@ -339,7 +347,7 @@ export function afterRender({ root }) {
 
   // ── STEP 4: Date & Timeslots ──────────────────────────────────────────────
   async function renderTimeslot() {
-    const today = new Date().toISOString().split('T')[0];
+    const today = localDateISO();
 
     if (state.modifyBookingId && !state.originalBooking) {
       // Load existing booking to pre-fill service/staff

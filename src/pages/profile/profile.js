@@ -1,10 +1,15 @@
 import template from './profile.html?raw';
 import './profile.css';
+import { Modal } from 'bootstrap';
 import { supabase } from '../../services/supabase.js';
 import { getUser, isAuthenticated } from '../../services/session.js';
 import { translateRoot, t } from '../../services/i18n.js';
 import { navigate } from '../../app.js';
-import { uploadFile, avatarPath, getPublicUrl, BUCKETS } from '../../services/storage.js';
+import {
+  uploadFile, avatarPath, getPublicUrl, BUCKETS,
+  listFiles, getSignedUrl, downloadFile, triggerDownload,
+  formatBytes, isImage
+} from '../../services/storage.js';
 
 export function render() { return template; }
 
@@ -15,10 +20,23 @@ export function afterRender({ root }) {
 
   const user = getUser();
   const STATUS_COLORS = { pending: 'warning text-dark', confirmed: 'success', completed: 'primary', cancelled: 'secondary' };
+  const filesModalEl = root.querySelector('#profile-booking-files-modal');
+  const filesModalTitle = root.querySelector('#profile-booking-files-title');
+  const filesModalBody = root.querySelector('#profile-booking-files-body');
+  const filesModalFooter = root.querySelector('#profile-booking-files-footer');
+  const filesModal = new Modal(filesModalEl);
+  const ownBookingsFilter = `user_id.eq.${user.id},customer_email.eq.${user.email ?? ''}`;
 
   function esc(s) { return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
   function fmtDate(d) { return d ? new Date(d + 'T12:00:00').toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' }) : '—'; }
   function fmtTime(t) { const [h, m] = String(t).split(':').map(Number); return `${h%12||12}:${String(m).padStart(2,'0')} ${h>=12?'PM':'AM'}`; }
+  function localDateISO() {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  }
 
   let profileData = null;
   let staffList = [];
@@ -74,18 +92,29 @@ export function afterRender({ root }) {
 
   // ── Load bookings ─────────────────────────────────────────────────────────
   async function loadBookings() {
-    const today = new Date().toISOString().split('T')[0];
-    const [{ data: upcoming }, { data: past }] = await Promise.all([
+    const today = localDateISO();
+    const [{ data: upcoming, error: upcomingError }, { data: past, error: pastError }] = await Promise.all([
       supabase.from('bookings')
-        .select('id, booking_date, booking_time, status, notes, services(service_name, service_duration_minutes), profiles!bookings_staff_user_id_fkey(full_name)')
-        .eq('user_id', user.id).gte('booking_date', today).neq('status', 'cancelled')
+        .select('id, booking_date, booking_time, status, notes, staff_user_id, services(service_name, service_duration_minutes)')
+        .or(ownBookingsFilter)
+        .gte('booking_date', today).neq('status', 'cancelled')
         .order('booking_date').order('booking_time'),
       supabase.from('bookings')
-        .select('id, booking_date, booking_time, status, services(service_name, service_duration_minutes)')
-        .eq('user_id', user.id)
+        .select('id, booking_date, booking_time, status, staff_user_id, services(service_name, service_duration_minutes)')
+        .or(ownBookingsFilter)
         .or(`booking_date.lt.${today},status.eq.cancelled`)
         .order('booking_date', { ascending: false }).limit(20)
     ]);
+
+    if (upcomingError || pastError) {
+      console.error('Failed to load profile bookings', { upcomingError, pastError });
+      root.querySelector('#profile-upcoming-loading').classList.add('d-none');
+      root.querySelector('#profile-past-loading').classList.add('d-none');
+      root.querySelector('#profile-upcoming-list').innerHTML = `<p class="text-danger small">${esc((upcomingError ?? pastError)?.message ?? 'Failed to load bookings.')}</p>`;
+      root.querySelector('#profile-past-list').innerHTML = '';
+      return;
+    }
+
     root.querySelector('#profile-upcoming-loading').classList.add('d-none');
     root.querySelector('#profile-past-loading').classList.add('d-none');
     renderBookingList(root.querySelector('#profile-upcoming-list'), upcoming ?? [], true);
@@ -100,25 +129,84 @@ export function afterRender({ root }) {
           <div>
             <div class="fw-semibold">${esc(b.services?.service_name ?? '—')}</div>
             <div class="text-muted small">${fmtDate(b.booking_date)} · ${fmtTime(b.booking_time)} · ${b.services?.service_duration_minutes ?? '?'} min</div>
-            ${b.profiles?.full_name ? `<div class="text-muted small">with ${esc(b.profiles.full_name)}</div>` : ''}
+            ${b.staff_user_id ? `<div class="text-muted small">with stylist assigned</div>` : ''}
           </div>
           <div class="d-flex gap-2 align-items-center flex-shrink-0">
             <span class="badge bg-${STATUS_COLORS[b.status] ?? 'secondary'} status-badge">${b.status}</span>
+            <button class="btn btn-xs btn-outline-secondary files-btn" data-id="${b.id}" style="font-size:0.75rem;padding:2px 8px">${t('admin.file.files')}</button>
             ${allowCancel ? `<a href="/booking?modify=${b.id}" data-nav-link class="btn btn-xs btn-outline-secondary" style="font-size:0.75rem;padding:2px 8px">${t('booking.success.reschedule')}</a>
               <button class="btn btn-xs btn-outline-danger cancel-btn" data-id="${b.id}" style="font-size:0.75rem;padding:2px 8px">${t('profile.cancel')}</button>` : ''}
           </div>
         </div>
       </div>`).join('');
+
+    container.querySelectorAll('.files-btn').forEach((btn) => {
+      btn.addEventListener('click', () => openBookingFilesModal(btn.dataset.id));
+    });
+
     if (allowCancel) {
       container.querySelectorAll('.cancel-btn').forEach((btn) => {
         btn.addEventListener('click', async () => {
           if (!confirm(t('profile.cancelConfirm'))) return;
           btn.disabled = true;
-          const { error } = await supabase.from('bookings').update({ status: 'cancelled' }).eq('id', btn.dataset.id).eq('user_id', user.id);
+          const { error } = await supabase
+            .from('bookings')
+            .update({ status: 'cancelled' })
+            .eq('id', btn.dataset.id)
+            .or(ownBookingsFilter);
           if (error) { btn.disabled = false; alert(error.message); return; }
           loadBookings();
         });
       });
+    }
+  }
+
+  async function openBookingFilesModal(bookingId) {
+    filesModalTitle.textContent = `${t('admin.file.files')} — #${bookingId.slice(0, 8)}`;
+    filesModalBody.innerHTML = `<div class="text-center py-3"><div class="spinner-border spinner-border-sm"></div></div>`;
+    filesModalFooter.innerHTML = `<button class="btn btn-secondary" data-bs-dismiss="modal">${t('modal.close')}</button>`;
+    filesModal.show();
+
+    try {
+      const files = await listFiles(BUCKETS.BOOKINGS, `${user.id}/${bookingId}`);
+      if (!files.length) {
+        filesModalBody.innerHTML = `<p class="text-muted text-center py-3">${t('admin.file.noFiles')}</p>`;
+        return;
+      }
+
+      filesModalBody.innerHTML = `<ul class="list-group list-group-flush">
+        ${files.map((f) => `
+          <li class="list-group-item d-flex justify-content-between align-items-center gap-2 px-0">
+            <div class="d-flex align-items-center gap-2 text-truncate">
+              ${isImage(f.name) ? `<img src="" data-path="${user.id}/${bookingId}/${f.name}" class="profile-booking-file-thumb rounded">` : '📄'}
+              <span class="text-truncate small">${esc(f.name)}</span>
+              <small class="text-muted">${formatBytes(f.metadata?.size)}</small>
+            </div>
+            <button class="btn btn-sm btn-outline-primary" data-file-download="${f.name}">${t('admin.file.download')}</button>
+          </li>`).join('')}
+      </ul>`;
+
+      filesModalBody.querySelectorAll('[data-path]').forEach(async (img) => {
+        try {
+          img.src = await getSignedUrl(BUCKETS.BOOKINGS, img.dataset.path, 300);
+        } catch {
+          // Ignore missing thumbnail URL; file remains downloadable.
+        }
+      });
+
+      filesModalBody.querySelectorAll('[data-file-download]').forEach((btn) => {
+        btn.addEventListener('click', async () => {
+          const path = `${user.id}/${bookingId}/${btn.dataset.fileDownload}`;
+          try {
+            const blob = await downloadFile(BUCKETS.BOOKINGS, path);
+            triggerDownload(blob, btn.dataset.fileDownload);
+          } catch (err) {
+            alert(err.message);
+          }
+        });
+      });
+    } catch (err) {
+      filesModalBody.innerHTML = `<div class="alert alert-danger">${esc(err.message)}</div>`;
     }
   }
 
