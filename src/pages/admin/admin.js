@@ -140,6 +140,7 @@ export function afterRender({ root }) {
       const image = categoryImageUrl(category);
       const serviceCount = serviceCounts.get(category.id) ?? 0;
       const productCount = productCounts.get(category.id) ?? 0;
+      const canDelete = serviceCount === 0 && productCount === 0;
       return `
         <div class="col-12 col-sm-6 col-lg-4 col-xxl-3">
           <div class="card h-100 category-card">
@@ -155,6 +156,12 @@ export function afterRender({ root }) {
               <p class="text-muted small mb-3">${serviceCount} services · ${productCount} products</p>
               <div class="d-flex flex-wrap gap-2">
                 <button class="btn btn-sm btn-outline-primary" data-action="edit-category" data-id="${category.id}">${t('customers.btn.edit')}</button>
+                <button class="btn btn-sm btn-outline-secondary" data-action="toggle-category" data-id="${category.id}" data-active="${category.is_active ? 'true' : 'false'}">
+                  ${category.is_active ? 'Set inactive' : 'Set active'}
+                </button>
+                <button class="btn btn-sm btn-outline-danger" data-action="delete-category" data-id="${category.id}" ${canDelete ? '' : 'disabled'} title="${canDelete ? 'Delete category' : 'Remove linked services/products first'}">
+                  ${t('customers.btn.delete')}
+                </button>
               </div>
             </div>
           </div>
@@ -164,6 +171,61 @@ export function afterRender({ root }) {
     gridEl.querySelectorAll('[data-action="edit-category"]').forEach((btn) => {
       btn.addEventListener('click', () => openCategoryForm(btn.dataset.id, categoriesResult.find((c) => c.id === btn.dataset.id)));
     });
+    gridEl.querySelectorAll('[data-action="toggle-category"]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const category = categoriesResult.find((item) => item.id === btn.dataset.id);
+        if (!category) return;
+        const nextActive = btn.dataset.active !== 'true';
+        toggleCategoryStatus(category, nextActive);
+      });
+    });
+    gridEl.querySelectorAll('[data-action="delete-category"]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const category = categoriesResult.find((item) => item.id === btn.dataset.id);
+        if (!category) return;
+        const serviceCount = serviceCounts.get(category.id) ?? 0;
+        const productCount = productCounts.get(category.id) ?? 0;
+        deleteCategory(category, serviceCount, productCount);
+      });
+    });
+  }
+
+  async function toggleCategoryStatus(category, nextActive) {
+    const actionLabel = nextActive ? 'activate' : 'deactivate';
+    if (!confirm(`Are you sure you want to ${actionLabel} category "${categoryLabel(category.name)}"?`)) return;
+
+    const { error } = await supabase
+      .from('categories')
+      .update({ is_active: nextActive })
+      .eq('id', category.id);
+
+    if (error) {
+      showAlert(error.message, 'danger');
+      return;
+    }
+
+    showAlert(nextActive ? 'Category activated.' : 'Category set to inactive.');
+    panes.categories = false;
+    loadCategories();
+  }
+
+  async function deleteCategory(category, serviceCount, productCount) {
+    if (serviceCount > 0 || productCount > 0) {
+      showAlert('This category is in use. Set it inactive first or remove linked services/products.', 'warning');
+      return;
+    }
+
+    if (!confirm(`Delete category "${categoryLabel(category.name)}"? This cannot be undone.`)) return;
+
+    const { error } = await supabase.from('categories').delete().eq('id', category.id);
+    if (error) {
+      showAlert(error.message, 'danger');
+      return;
+    }
+
+    showAlert(t('admin.deleted'));
+    panes.categories = false;
+    loadCategories();
   }
 
   function categoryFormBody(category = {}) {

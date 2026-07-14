@@ -80,6 +80,17 @@
 
 .category-pill.active {
   opacity: 1;
+  transform: translateY(-4px);
+}
+
+.category-pill.active .category-pill-image-frame {
+  border-color: rgba(49, 195, 176, 0.95);
+  box-shadow: 0 0 0 2px rgba(49, 195, 176, 0.18), 0 18px 32px rgba(0, 0, 0, 0.14);
+}
+
+.category-pill.active .category-pill-label {
+  color: #31c3b0;
+  text-shadow: 0 0 14px rgba(49, 195, 176, 0.15), 0 1px 4px rgba(0, 0, 0, 0.45);
 }
 
 .product-card.active {
@@ -95,6 +106,8 @@
   border: 1px solid rgba(232, 216, 194, 0.95);
   box-shadow: 0 16px 28px rgba(0, 0, 0, 0.08);
   position: relative;
+  border-radius: 1.1rem;
+  overflow: hidden;
 }
 
 .category-pill-image-frame::before {
@@ -102,6 +115,7 @@
   position: absolute;
   inset: 0.45rem;
   border: 1px solid rgba(255, 255, 255, 0.8);
+  border-radius: 0.85rem;
   pointer-events: none;
 }
 
@@ -111,6 +125,7 @@
   height: 100%;
   object-fit: cover;
   background: #d8d0c7;
+  border-radius: 0.75rem;
 }
 
 .category-pill-number {

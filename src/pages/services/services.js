@@ -4,6 +4,9 @@ import { supabase } from '../../services/supabase.js';
 import { getLocale, translateRoot, t } from '../../services/i18n.js';
 import { fetchCategories, categoryImageUrl, categoryLabel, categorySlug } from '../../services/catalog.js';
 
+const sameId = (left, right) => String(left ?? '') === String(right ?? '');
+const sameCategory = (left, right) => categorySlug(left) === categorySlug(right);
+
 const CATEGORY_TRANSLATIONS = {
   hair: { en: 'Hair', bg: 'Коса' },
   coloring: { en: 'Coloring', bg: 'Боядисване' },
@@ -118,9 +121,6 @@ export function afterRender({ root }) {
   const nextBtn = root.querySelector('#services-strip-next');
   const listEl = root.querySelector('#services-list');
   const loadingEl = root.querySelector('#services-loading');
-  const titleEl = root.querySelector('#services-category-title');
-  const copyEl = root.querySelector('#services-category-copy');
-  const countEl = root.querySelector('#services-category-count');
 
   prevBtn?.setAttribute('aria-label', t('services.prevCategories'));
   nextBtn?.setAttribute('aria-label', t('services.nextCategories'));
@@ -132,10 +132,10 @@ export function afterRender({ root }) {
 
   const fmtPrice = (value) => `€${Number(value ?? 0).toFixed(2)}`;
   function renderServices(category, services, categoryCount) {
-    const filtered = services.filter((service) => service.category_id === category.id);
-    titleEl.textContent = translateCategoryName(category.name);
-    copyEl.textContent = categoryCopy(filtered.length);
-    countEl.textContent = countCopy(services.length, categoryCount);
+    const filteredById = services.filter((service) => sameId(service.category_id, category.id));
+    const filtered = filteredById.length
+      ? filteredById
+      : services.filter((service) => sameCategory(service.category, category.name));
 
     listEl.innerHTML = filtered.map((service, index) => `
       <article class="col-12 col-lg-6 service-card-shell" style="animation-delay:${index * 70}ms">
@@ -210,7 +210,6 @@ export function afterRender({ root }) {
         role="tab"
         aria-selected="${index === 0 ? 'true' : 'false'}">
         <span class="category-pill-image-frame"><img class="category-pill-image" src="${categoryImageUrl(category)}" alt="${esc(translateCategoryName(category.name))}"></span>
-        <span class="category-pill-number">${String(index + 1).padStart(2, '0')}</span>
         <span class="category-pill-copy">
           <span class="category-pill-label">${esc(translateCategoryName(category.name))}</span>
         </span>
@@ -229,13 +228,15 @@ export function afterRender({ root }) {
     const activateCategory = (category) => {
       if (!category) return;
       stripEl.querySelectorAll('.category-pill').forEach((pill) => {
-        pill.classList.toggle('active', pill.dataset.category === category.id);
+        const isActive = sameId(pill.dataset.category, category.id);
+        pill.classList.toggle('active', isActive);
+        pill.setAttribute('aria-selected', isActive ? 'true' : 'false');
       });
       renderServices(category, services, categories.length);
     };
 
     stripEl.querySelectorAll('.category-pill').forEach((pill) => {
-      pill.addEventListener('click', () => activateCategory(categories.find((category) => category.id === pill.dataset.category)));
+      pill.addEventListener('click', () => activateCategory(categories.find((category) => sameId(category.id, pill.dataset.category))));
     });
 
     activateCategory(categories[0]);

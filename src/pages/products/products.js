@@ -73,12 +73,6 @@ function categoryCopy(count) {
     : `${count} ${count === 1 ? 'product' : 'products'} in this category`;
 }
 
-function countCopy(productCount, categoryCount) {
-  return getLocale() === 'bg'
-    ? `${productCount} активни продукта в ${categoryCount} ${categoryCount === 1 ? 'категория' : 'категории'}`
-    : `${productCount} active products across ${categoryCount} categories`;
-}
-
 function formatReviewDate(value) {
   if (!value) return '—';
   return new Date(value).toLocaleDateString(undefined, {
@@ -117,15 +111,17 @@ export function afterRender({ root }) {
   const nextBtn = root.querySelector('#products-strip-next');
   const listEl = root.querySelector('#products-list');
   const loadingEl = root.querySelector('#products-loading');
-  const titleEl = root.querySelector('#products-category-title');
-  const copyEl = root.querySelector('#products-category-copy');
+  const reviewSectionEl = root.querySelector('.products-reviews-section');
   const reviewTitleEl = root.querySelector('#products-review-title');
   const reviewCopyEl = root.querySelector('#products-review-copy');
+  const reviewSummaryStarsEl = root.querySelector('#products-review-stars-summary');
+  const reviewSummaryEl = root.querySelector('.products-review-summary');
   const reviewAverageEl = root.querySelector('#products-review-average');
   const reviewCountEl = root.querySelector('#products-review-count');
   const reviewListEl = root.querySelector('#product-reviews-list');
   const reviewFormEl = root.querySelector('#product-review-form');
   const reviewGateEl = root.querySelector('#product-review-gate');
+  const reviewReadonlyNoteEl = root.querySelector('#product-review-readonly-note');
   const reviewStarsEl = root.querySelector('#product-review-stars');
   const reviewTextEl = root.querySelector('#product-review-text');
   const reviewImagesEl = root.querySelector('#product-review-images');
@@ -136,6 +132,7 @@ export function afterRender({ root }) {
   let reviewerName = '';
   let products = [];
   let selectedCategory = null;
+  let reviewsEnabled = true;
 
   prevBtn?.setAttribute('aria-label', t('products.prevCategories'));
   nextBtn?.setAttribute('aria-label', t('products.nextCategories'));
@@ -144,6 +141,43 @@ export function afterRender({ root }) {
   const esc = (value) => String(value ?? '')
     .replace(/&/g, '&amp;').replace(/</g, '&lt;')
     .replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+  const sameId = (left, right) => String(left ?? '') === String(right ?? '');
+  const sameCategory = (left, right) => categorySlug(left) === categorySlug(right);
+
+  function reviewsUnavailableText() {
+    return getLocale() === 'bg'
+      ? 'Отзивите са временно недостъпни.'
+      : 'Reviews are temporarily unavailable.';
+  }
+
+  function isMissingTableError(error, tableName) {
+    const msg = `${error?.message ?? ''} ${error?.details ?? ''}`.toLowerCase();
+    const table = `public.${tableName}`.toLowerCase();
+    return msg.includes(table)
+      && (msg.includes('schema cache')
+        || msg.includes('could not find the table')
+        || msg.includes('does not exist'));
+  }
+
+  function disableReviews(message = reviewsUnavailableText()) {
+    reviewsEnabled = false;
+    if (reviewTitleEl) reviewTitleEl.textContent = t('products.reviews.title');
+    if (reviewCopyEl) reviewCopyEl.textContent = message;
+    if (reviewAverageEl) reviewAverageEl.textContent = '—';
+    if (reviewCountEl) reviewCountEl.textContent = t('products.reviews.count');
+    if (reviewListEl) {
+      reviewListEl.innerHTML = `<div class="alert alert-warning mb-0">${esc(message)}</div>`;
+    }
+    if (reviewFormEl) {
+      reviewFormEl.querySelectorAll('input, textarea, button').forEach((input) => {
+        input.disabled = true;
+      });
+    }
+  }
+
+  function setReviewSectionVisible(visible) {
+    reviewSectionEl?.classList.toggle('d-none', !visible);
+  }
 
   function renderReviewStars() {
     if (!reviewStarsEl) return;
@@ -161,7 +195,13 @@ export function afterRender({ root }) {
     const average = total
       ? reviews.reduce((sum, review) => sum + Number(review.rating ?? 0), 0) / total
       : 0;
+    reviewSummaryEl?.classList.toggle('d-none', total === 0);
+    reviewSummaryStarsEl?.classList.toggle('d-none', total === 0);
     if (reviewAverageEl) reviewAverageEl.textContent = total ? `${average.toFixed(1)} / 5` : '—';
+    if (reviewSummaryStarsEl) {
+      const rounded = Math.round(average);
+      reviewSummaryStarsEl.innerHTML = starMarkup(rounded, false, rounded);
+    }
     if (reviewCountEl) {
       reviewCountEl.textContent = total
         ? `${total} ${getLocale() === 'bg' ? (total === 1 ? 'отзив' : 'отзива') : (total === 1 ? 'review' : 'reviews')}`
@@ -174,7 +214,7 @@ export function afterRender({ root }) {
     if (!reviewListEl) return;
 
     if (!reviews.length) {
-      reviewListEl.innerHTML = `<div class="alert alert-info mb-0">${esc(t('products.reviews.empty'))}</div>`;
+      reviewListEl.innerHTML = `<div class="text-light-muted small">${esc(t('products.reviews.empty'))}</div>`;
       return;
     }
 
@@ -208,6 +248,9 @@ export function afterRender({ root }) {
   function setReviewGate(enabled) {
     if (!reviewGateEl || !reviewFormEl) return;
     if (enabled) {
+      reviewReadonlyNoteEl?.classList.add('d-none');
+      reviewReadonlyNoteEl && (reviewReadonlyNoteEl.innerHTML = '');
+      reviewFormEl.classList.remove('d-none');
       reviewGateEl.classList.add('d-none');
       reviewGateEl.innerHTML = '';
       reviewFormEl.querySelectorAll('input, textarea, button').forEach((input) => {
@@ -216,6 +259,11 @@ export function afterRender({ root }) {
       return;
     }
 
+    if (reviewReadonlyNoteEl) {
+      reviewReadonlyNoteEl.classList.remove('d-none');
+      reviewReadonlyNoteEl.innerHTML = `${esc(t('products.reviews.loginPrompt'))} <a href="/login" data-nav-link>${esc(t('products.reviews.signIn'))}</a>`;
+    }
+    reviewFormEl.classList.add('d-none');
     reviewGateEl.classList.remove('d-none');
     reviewGateEl.innerHTML = `${esc(t('products.reviews.loginPrompt'))} <a href="/login" data-nav-link>${esc(t('products.reviews.signIn'))}</a>`;
     reviewFormEl.querySelectorAll('input, textarea, button').forEach((input) => {
@@ -237,6 +285,10 @@ export function afterRender({ root }) {
 
   async function loadReviews(product) {
     if (!reviewTitleEl || !reviewCopyEl) return;
+    if (!reviewsEnabled) {
+      disableReviews();
+      return;
+    }
     selectedProduct = product;
     reviewTitleEl.textContent = translateProductName(product.product_name);
     reviewCopyEl.textContent = `${translateCategoryName(product.category)} · ${product.brand}`;
@@ -250,13 +302,27 @@ export function afterRender({ root }) {
       });
     }
 
-    const { data, error } = await supabase
+    let { data, error } = await supabase
       .from('product_reviews')
       .select('id, product_id, user_id, reviewer_name, rating, review_text, created_at, product_review_images(id, image_path, original_name, sort_order)')
       .eq('product_id', product.id)
       .order('created_at', { ascending: false });
 
+    if (error && isMissingTableError(error, 'product_review_images')) {
+      const fallback = await supabase
+        .from('product_reviews')
+        .select('id, product_id, user_id, reviewer_name, rating, review_text, created_at')
+        .eq('product_id', product.id)
+        .order('created_at', { ascending: false });
+      data = (fallback.data ?? []).map((review) => ({ ...review, product_review_images: [] }));
+      error = fallback.error;
+    }
+
     if (error) {
+      if (isMissingTableError(error, 'product_reviews')) {
+        disableReviews();
+        return;
+      }
       reviewListEl.innerHTML = `<div class="alert alert-danger mb-0">${esc(error.message)}</div>`;
       reviewAverageEl.textContent = '—';
       reviewCountEl.textContent = t('products.reviews.count');
@@ -266,11 +332,22 @@ export function afterRender({ root }) {
     renderReviews(data ?? []);
   }
 
-  function renderProducts(category, categoryProducts, categoryCount) {
-    const filtered = categoryProducts.filter((product) => product.category_id === category.id);
-    titleEl.textContent = translateCategoryName(category.name);
-    copyEl.textContent = categoryCopy(filtered.length);
+  function renderProducts(category, categoryProducts) {
+    const filteredById = categoryProducts.filter((product) => sameId(product.category_id, category.id));
+    const filtered = filteredById.length
+      ? filteredById
+      : categoryProducts.filter((product) => sameCategory(product.category, category.name));
     selectedCategory = category;
+
+    if (!filtered.length) {
+      loadingEl.classList.add('d-none');
+      listEl.classList.remove('d-none');
+      listEl.innerHTML = `<div class="col-12"><div class="alert alert-warning mb-0">${esc(t('products.noProducts'))}</div></div>`;
+      setReviewSectionVisible(false);
+      return;
+    }
+
+    setReviewSectionVisible(true);
 
     listEl.innerHTML = filtered.map((product, index) => `
       <article class="col-12 col-lg-6 product-card-shell" style="animation-delay:${index * 70}ms">
@@ -294,7 +371,7 @@ export function afterRender({ root }) {
             <p class="product-brand mb-4">${esc(product.brand)}</p>
             <div class="d-flex flex-wrap gap-2 align-items-center product-card-meta">
               <span class="badge badge-soft"><i class="bi bi-box-seam me-1"></i>${getLocale() === 'bg' ? 'Наличност' : 'In stock'}: ${product.stock_quantity}</span>
-              <button type="button" class="btn btn-sm btn-primary ms-auto product-review-select" data-product-id="${esc(product.id)}">${esc(t('products.reviews.label'))}</button>
+              <button type="button" class="btn btn-sm btn-primary ms-auto product-review-select" data-product-id="${esc(product.id)}" ${reviewsEnabled ? '' : 'disabled'}>${esc(t('products.reviews.label'))}</button>
             </div>
           </div>
         </div>
@@ -303,7 +380,7 @@ export function afterRender({ root }) {
 
     listEl.querySelectorAll('.product-review-select').forEach((button) => {
       button.addEventListener('click', async () => {
-        const product = categoryProducts.find((item) => item.id === button.dataset.productId);
+        const product = categoryProducts.find((item) => sameId(item.id, button.dataset.productId));
         if (product) {
           await loadReviews(product);
           root.querySelector('.products-reviews-section')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -313,13 +390,12 @@ export function afterRender({ root }) {
 
     loadingEl.classList.add('d-none');
     listEl.classList.remove('d-none');
-    copyEl.textContent = countCopy(categoryProducts.length, categoryCount);
 
     if (filtered[0] && !selectedProduct) {
-      loadReviews(filtered[0]);
+      if (reviewsEnabled) loadReviews(filtered[0]);
     } else if (selectedProduct) {
-      const selected = filtered.find((product) => product.id === selectedProduct.id) ?? filtered[0];
-      if (selected) loadReviews(selected);
+      const selected = filtered.find((product) => sameId(product.id, selectedProduct.id)) ?? filtered[0];
+      if (selected && reviewsEnabled) loadReviews(selected);
     }
   }
 
@@ -347,6 +423,7 @@ export function afterRender({ root }) {
     products = data ?? [];
     if (!products.length) {
       loadingEl.innerHTML = `<div class="alert alert-warning mb-0">${esc(t('products.noProducts'))}</div>`;
+      setReviewSectionVisible(false);
       return;
     }
 
@@ -355,6 +432,15 @@ export function afterRender({ root }) {
     reviewTitleEl.textContent = t('products.reviews.title');
     reviewCopyEl.textContent = t('products.reviews.selectProduct');
     renderReviewStars();
+    setReviewSectionVisible(true);
+
+    const { error: reviewTableError } = await supabase
+      .from('product_reviews')
+      .select('id')
+      .limit(1);
+    if (reviewTableError && isMissingTableError(reviewTableError, 'product_reviews')) {
+      disableReviews();
+    }
 
     stripEl.innerHTML = categories.map((category, index) => `
       <button type="button"
@@ -363,7 +449,6 @@ export function afterRender({ root }) {
         role="tab"
         aria-selected="${index === 0 ? 'true' : 'false'}">
         <span class="category-pill-image-frame"><img class="category-pill-image" src="${categoryImageUrl(category)}" alt="${esc(translateCategoryName(category.name))}"></span>
-        <span class="category-pill-number">${String(index + 1).padStart(2, '0')}</span>
         <span class="category-pill-copy">
           <span class="category-pill-label">${esc(translateCategoryName(category.name))}</span>
         </span>
@@ -382,19 +467,21 @@ export function afterRender({ root }) {
     const activateCategory = (category) => {
       if (!category) return;
       stripEl.querySelectorAll('.category-pill').forEach((pill) => {
-        pill.classList.toggle('active', pill.dataset.category === category.id);
+        const isActive = sameId(pill.dataset.category, category.id);
+        pill.classList.toggle('active', isActive);
+        pill.setAttribute('aria-selected', isActive ? 'true' : 'false');
       });
-      renderProducts(category, products, categories.length);
+      renderProducts(category, products);
     };
 
     stripEl.querySelectorAll('.category-pill').forEach((pill) => {
       pill.addEventListener('click', () => {
-        const category = categories.find((item) => item.id === pill.dataset.category);
+        const category = categories.find((item) => sameId(item.id, pill.dataset.category));
         activateCategory(category);
       });
     });
 
-    titleEl.textContent = translateCategoryName(categories[0]?.name);
+    if (titleEl) titleEl.textContent = translateCategoryName(categories[0]?.name);
     activateCategory(categories[0]);
   }
 
@@ -402,6 +489,7 @@ export function afterRender({ root }) {
 
   reviewFormEl?.addEventListener('submit', async (event) => {
     event.preventDefault();
+    if (!reviewsEnabled) return;
     if (!selectedProduct) return;
     if (!isAuthenticated()) {
       navigate('/login');
@@ -451,7 +539,7 @@ export function afterRender({ root }) {
 
         if (imageRows.length) {
           const { error: imageError } = await supabase.from('product_review_images').insert(imageRows);
-          if (imageError) throw imageError;
+          if (imageError && !isMissingTableError(imageError, 'product_review_images')) throw imageError;
         }
       }
 
