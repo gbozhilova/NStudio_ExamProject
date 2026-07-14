@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Dancing+Script:wght@400;500;600;700&family=Marck+Script&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Cormorant+Garamond:wght@500;600;700&family=Dancing+Script:wght@400;500;600;700&family=Marck+Script&display=swap');
 
 :root {
   color-scheme: light;
@@ -10,6 +10,10 @@
   --text-soft: #c8b9a6;
   --accent: #31c3b0;
   --accent-warm: #d8b48a;
+  --font-body: 'Inter', 'Segoe UI', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-display: 'Cormorant Garamond', Georgia, 'Times New Roman', serif;
+  --font-script: 'Dancing Script', 'Brush Script MT', cursive;
+  --font-script-bg: 'Marck Script', 'Dancing Script', 'Brush Script MT', cursive;
 }
 
 html,
@@ -19,7 +23,7 @@ body {
 
 body {
   margin: 0;
-  font-family: 'Inter', 'Segoe UI', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  font-family: var(--font-body);
   background:
     radial-gradient(circle at top left, rgba(49, 195, 176, 0.14), transparent 30%),
     radial-gradient(circle at top right, rgba(216, 180, 138, 0.16), transparent 26%),
@@ -96,16 +100,16 @@ a {
 .display-4,
 .display-6,
 .section-title {
-  font-family: 'Cormorant Garamond', Georgia, 'Times New Roman', serif;
+  font-family: var(--font-display);
   letter-spacing: 0.02em;
 }
 
 .script-font {
-  font-family: 'Dancing Script', 'Brush Script MT', cursive;
+  font-family: var(--font-script);
 }
 
 html[lang='bg'] .script-font {
-  font-family: 'Marck Script', 'Dancing Script', 'Brush Script MT', cursive;
+  font-family: var(--font-script-bg);
   letter-spacing: 0.01em;
 }
 

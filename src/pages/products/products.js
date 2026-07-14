@@ -214,7 +214,10 @@ export function afterRender({ root }) {
     if (!reviewListEl) return;
 
     if (!reviews.length) {
-      reviewListEl.innerHTML = `<div class="text-light-muted small">${esc(t('products.reviews.empty'))}</div>`;
+      const emptyText = isAuthenticated()
+        ? t('products.reviews.empty')
+        : `${t('products.reviews.empty')} <a href="/login" data-nav-link>${esc(t('products.reviews.signIn'))}</a> ${getLocale() === 'bg' ? 'за да оставите отзив.' : 'to leave a review.'}`;
+      reviewListEl.innerHTML = `<div class="text-light-muted small">${emptyText}</div>`;
       return;
     }
 
@@ -371,22 +374,11 @@ export function afterRender({ root }) {
             <p class="product-brand mb-4">${esc(product.brand)}</p>
             <div class="d-flex flex-wrap gap-2 align-items-center product-card-meta">
               <span class="badge badge-soft"><i class="bi bi-box-seam me-1"></i>${getLocale() === 'bg' ? 'Наличност' : 'In stock'}: ${product.stock_quantity}</span>
-              <button type="button" class="btn btn-sm btn-primary ms-auto product-review-select" data-product-id="${esc(product.id)}" ${reviewsEnabled ? '' : 'disabled'}>${esc(t('products.reviews.label'))}</button>
             </div>
           </div>
         </div>
       </article>
     `).join('');
-
-    listEl.querySelectorAll('.product-review-select').forEach((button) => {
-      button.addEventListener('click', async () => {
-        const product = categoryProducts.find((item) => sameId(item.id, button.dataset.productId));
-        if (product) {
-          await loadReviews(product);
-          root.querySelector('.products-reviews-section')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        }
-      });
-    });
 
     loadingEl.classList.add('d-none');
     listEl.classList.remove('d-none');
@@ -481,8 +473,11 @@ export function afterRender({ root }) {
       });
     });
 
-    if (titleEl) titleEl.textContent = translateCategoryName(categories[0]?.name);
-    activateCategory(categories[0]);
+    const initialCategory = categories.find((category) =>
+      products.some((product) => sameId(product.category_id, category.id) || sameCategory(product.category, category.name))
+    ) ?? categories[0];
+
+    activateCategory(initialCategory);
   }
 
   loadProducts();

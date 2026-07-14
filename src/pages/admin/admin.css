@@ -2,6 +2,53 @@
   max-width: 260px;
 }
 
+.admin-page .btn-primary,
+.admin-page .btn-success {
+  background: linear-gradient(135deg, #31c3b0, #279286);
+  border-color: #31c3b0;
+  color: #071315;
+  font-weight: 700;
+}
+
+.admin-page .btn-primary:hover,
+.admin-page .btn-success:hover {
+  background: linear-gradient(135deg, #2ab5a4, #237f74);
+  border-color: #2ab5a4;
+  color: #061012;
+}
+
+.admin-page .btn-outline-primary,
+.admin-page .btn-outline-secondary,
+.admin-page .btn-outline-danger {
+  border-color: rgba(232, 216, 194, 0.28);
+  color: #f5ede4;
+}
+
+.admin-page .btn-outline-primary:hover,
+.admin-page .btn-outline-secondary:hover,
+.admin-page .btn-outline-danger:hover {
+  background: #f5ede4;
+  color: #111827;
+  border-color: #f5ede4;
+}
+
+.admin-page .btn-outline-danger:hover {
+  background: #f5ede4;
+  color: #7f1d1d;
+}
+
+.admin-page .nav-tabs .nav-link {
+  border-color: rgba(232, 216, 194, 0.22);
+  color: #f5ede4;
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.admin-page .nav-tabs .nav-link.active {
+  background: #f5ede4;
+  border-color: #f5ede4;
+  color: #141414;
+}
+
 .admin-page .nav-tabs .nav-link {
   font-size: 0.9rem;
   font-weight: 500;

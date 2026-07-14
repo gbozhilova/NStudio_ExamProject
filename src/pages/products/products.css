@@ -129,7 +129,7 @@
 }
 
 .category-pill-number {
-  font-family: 'Cormorant Garamond', Georgia, serif;
+  font-family: var(--font-display);
   font-size: clamp(1.9rem, 3vw, 2.5rem);
   font-weight: 700;
   line-height: 0.9;
@@ -145,12 +145,12 @@
 }
 
 .category-pill-label {
-  font-family: 'Cormorant Garamond', Georgia, serif;
-  font-size: 1.12rem;
-  font-weight: 700;
-  line-height: 1.05;
+  font-family: var(--font-body);
+  font-size: 0.92rem;
+  font-weight: 600;
+  line-height: 1.15;
   color: #f5ede4;
-  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.45);
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.38);
 }
 
 .product-card-shell {
@@ -198,32 +198,49 @@
   z-index: 1;
   flex: 1;
   padding: 0 1rem 1rem;
+  color: #111827;
 }
 
 .product-card-category {
-  color: #6d3b7f;
+  color: #0f766e;
+  font-weight: 700;
 }
 
 .product-stock {
   align-self: flex-start;
   background: transparent;
-  color: #111;
+  color: #111827;
   border: 0;
   padding-inline: 0;
-  font-family: 'Cormorant Garamond', Georgia, serif;
+  font-family: var(--font-display);
   font-size: 1.15rem;
   font-weight: 700;
 }
 
 .product-brand {
-  color: rgba(17, 17, 17, 0.75);
+  color: rgba(17, 24, 39, 0.82);
 }
 
 .badge-soft {
   background: transparent;
   border: 0;
-  color: #111;
+  color: #111827;
   padding-left: 0;
+}
+
+.product-card-body h3,
+.product-card-body .h5 {
+  color: #111827;
+  font-weight: 700;
+}
+
+.product-card-body .text-muted,
+.product-card-body .small {
+  color: rgba(17, 24, 39, 0.78) !important;
+}
+
+.product-card-body .badge {
+  color: #111827;
 }
 
 .product-card-badge {

@@ -24,6 +24,7 @@ export function afterRender({ root }) {
     step: 1,
     categoryId: null,
     categoryName: null,
+    services: [],
     service: null,
     staff: null,   // null = any available
     date: null,
@@ -85,6 +86,27 @@ export function afterRender({ root }) {
     return new Date(d + 'T12:00:00').toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
   }
 
+  function syncPrimaryService() {
+    state.service = state.services[0] ?? null;
+  }
+
+  function getSelectedServiceIds() {
+    return state.services.map((service) => service.id);
+  }
+
+  function getSelectedServiceDuration() {
+    return state.services.reduce((total, service) => total + Number(service.service_duration_minutes ?? 0), 0);
+  }
+
+  function getSelectedServicePrice() {
+    return state.services.reduce((total, service) => total + Number(service.price ?? 0), 0);
+  }
+
+  function setNextLabel(label) {
+    const labelEl = nextBtn.querySelector('.btn-label');
+    if (labelEl) labelEl.textContent = label;
+  }
+
   function updateProgress() {
     root.querySelectorAll('.booking-step-dot').forEach((dot) => {
       const n = parseInt(dot.dataset.step, 10);
@@ -96,9 +118,13 @@ export function afterRender({ root }) {
   function updateSummaryBar() {
     const parts = [];
     if (state.categoryName) parts.push(`<span class="summary-item">${escHtml(state.categoryName)}</span>`);
-    if (state.service) parts.push(`<span class="summary-item">${escHtml(state.service.service_name)} — €${Number(state.service.price).toFixed(2)}</span>`);
+    if (state.services.length) {
+      const serviceLabel = state.services.length === 1 ? escHtml(state.services[0].service_name) : `${state.services.length} services`;
+      parts.push(`<span class="summary-item">${serviceLabel} — €${getSelectedServicePrice().toFixed(2)}</span>`);
+      parts.push(`<span class="summary-item">${getSelectedServiceDuration()} min</span>`);
+    }
     if (state.staff) parts.push(`<span class="summary-item">${escHtml(state.staffName ?? 'Staff')}</span>`);
-    else if (state.service) parts.push(`<span class="summary-item">Any available</span>`);
+    else if (state.services.length) parts.push(`<span class="summary-item">Any available</span>`);
     if (state.date && state.time) parts.push(`<span class="summary-item">${fmtDate(state.date)} at ${fmtTime(state.time)}</span>`);
     if (parts.length) {
       summaryBar.innerHTML = parts.join('');
@@ -153,7 +179,9 @@ export function afterRender({ root }) {
       <div class="booking-category-grid">
         ${(categories ?? []).map((cat) => `
           <div class="booking-category-card ${state.categoryId === cat.id ? 'selected' : ''}" data-cat-id="${escHtml(cat.id)}" data-cat-name="${escHtml(cat.name)}">
-            <img class="cat-thumb" src="${categoryImageUrl(cat)}" alt="${escHtml(cat.name)}" />
+            <span class="booking-category-image-frame">
+              <img class="cat-thumb" src="${categoryImageUrl(cat)}" alt="${escHtml(cat.name)}" />
+            </span>
             <div class="cat-name">${escHtml(categoryLabel(cat.name))}</div>
             <div class="cat-count small text-muted">${serviceCounts.get(cat.id) ?? 0} services</div>
           </div>`).join('')}
@@ -165,6 +193,7 @@ export function afterRender({ root }) {
       card.addEventListener('click', () => {
         state.categoryId = card.dataset.catId;
         state.categoryName = card.dataset.catName;
+        state.services = [];
         state.service = null;
         state.staff = null;
         state.time = null;
@@ -188,9 +217,11 @@ export function afterRender({ root }) {
 
     stepEl.innerHTML = `
       <h2 class="h4 fw-bold mb-4">${t('booking.step2.heading')}</h2>
+      <p class="text-muted mb-4">${t('booking.step2.hint')}</p>
+      <div id="booking-selected-services" class="booking-selected-services mb-4 d-none"></div>
       <div class="d-flex flex-column gap-3">
         ${data.map((s) => `
-          <div class="booking-service-card ${state.service?.id === s.id ? 'selected' : ''}" data-id="${s.id}">
+          <div class="booking-service-card ${state.services.some((service) => service.id === s.id) ? 'selected' : ''}" data-id="${s.id}">
             <div class="d-flex justify-content-between align-items-start gap-3">
               <div class="flex-grow-1">
                 <div class="fw-semibold">${escHtml(s.service_name)}</div>
@@ -204,16 +235,68 @@ export function afterRender({ root }) {
           </div>`).join('')}
       </div>`;
 
-    showNav(true, false);
+    showNav(true, true);
+    setNextLabel(t('booking.step2.continueStylist'));
+
+    const selectedSummaryEl = stepEl.querySelector('#booking-selected-services');
+
+    function renderSelectedSummary() {
+      if (!selectedSummaryEl) return;
+      if (!state.services.length) {
+        selectedSummaryEl.classList.add('d-none');
+        selectedSummaryEl.innerHTML = '';
+        nextBtn.disabled = true;
+        return;
+      }
+
+      selectedSummaryEl.classList.remove('d-none');
+      selectedSummaryEl.innerHTML = `
+        <div class="booking-selected-services-card">
+          <div class="d-flex justify-content-between align-items-start gap-3 flex-wrap mb-3">
+            <div>
+              <div class="small booking-selected-services-label fw-semibold text-uppercase">${t('booking.step2.selected')}</div>
+              <div class="booking-selected-services-title fw-semibold">${state.services.length} ${state.services.length === 1 ? 'service' : 'services'}</div>
+            </div>
+            <div class="text-end">
+              <div class="booking-selected-services-price fw-semibold">€${getSelectedServicePrice().toFixed(2)}</div>
+              <div class="small booking-selected-services-meta">${getSelectedServiceDuration()} min</div>
+            </div>
+          </div>
+          <div class="booking-selected-services-list">
+            ${state.services.map((service) => `
+              <div class="booking-selected-services-item">
+                <span class="booking-selected-services-check" aria-hidden="true"><i class="bi bi-check2"></i></span>
+                <span class="booking-selected-services-name">${escHtml(service.service_name)}</span>
+              </div>`).join('')}
+          </div>
+        </div>`;
+      nextBtn.disabled = false;
+    }
+
+    renderSelectedSummary();
 
     stepEl.querySelectorAll('.booking-service-card').forEach((card) => {
       card.addEventListener('click', () => {
-        state.service = data.find((s) => s.id === card.dataset.id);
+        const selected = data.find((s) => s.id === card.dataset.id);
+        const existingIndex = state.services.findIndex((service) => service.id === selected.id);
+
+        if (existingIndex >= 0) {
+          state.services = state.services.filter((service) => service.id !== selected.id);
+        } else {
+          state.services = [...state.services, selected];
+        }
+
+        syncPrimaryService();
         state.staff = null;
+        state.staffName = null;
         state.time = null;
         stepEl.querySelectorAll('.booking-service-card').forEach((c) => c.classList.remove('selected'));
-        card.classList.add('selected');
-        setTimeout(() => goToStep(3), 200);
+        state.services.forEach((service) => {
+          const serviceCard = stepEl.querySelector(`.booking-service-card[data-id="${service.id}"]`);
+          serviceCard?.classList.add('selected');
+        });
+        renderSelectedSummary();
+        updateSummaryBar();
       });
     });
   }
@@ -267,7 +350,15 @@ export function afterRender({ root }) {
         .single();
       if (error || !bk) { showAlert(t('booking.error.notFound')); return; }
       state.originalBooking = bk;
-      state.service = { id: bk.service_id, ...bk.services };
+      const { data: bookingServices } = await supabase
+        .from('booking_services')
+        .select('service_id, sort_order, services(id, service_name, service_duration_minutes, price, category, category_id)')
+        .eq('booking_id', state.modifyBookingId)
+        .order('sort_order');
+      state.services = (bookingServices?.length
+        ? bookingServices.map((item) => ({ id: item.service_id, ...item.services }))
+        : [{ id: bk.service_id, ...bk.services }]).filter(Boolean);
+      syncPrimaryService();
       state.categoryId = bk.services?.category_id ?? null;
       state.categoryName = bk.services?.category ?? null;
       state.staff = bk.staff_user_id;
@@ -286,16 +377,24 @@ export function afterRender({ root }) {
       </div>`;
 
     showNav(state.modifyBookingId ? false : true, false);
+    setNextLabel(t('booking.step4.continueConfirmation'));
 
     const dateInput = stepEl.querySelector('#booking-date');
 
     async function loadSlots(date) {
       const slotsEl = stepEl.querySelector('#slots-container');
       slotsEl.innerHTML = `<div class="text-center py-3"><div class="spinner-border spinner-border-sm text-primary"></div></div>`;
+      const primaryService = state.service ?? state.services[0];
+
+      if (!primaryService) {
+        slotsEl.innerHTML = `<div class="alert alert-warning">${t('booking.step2.selectAtLeastOne')}</div>`;
+        return;
+      }
 
       const { data: slots, error } = await supabase.rpc('get_available_slots', {
         p_date: date,
-        p_service_id: state.service.id,
+        p_service_id: primaryService.id,
+        p_duration_minutes: getSelectedServiceDuration(),
         p_staff_user_id: state.staff ?? null
       });
 
@@ -362,25 +461,28 @@ export function afterRender({ root }) {
 
       <div class="booking-confirm-card mb-4">
         <div class="row g-2">
-          <div class="col-6"><div class="text-muted small">${t('booking.confirm.service')}</div><div class="fw-semibold">${escHtml(state.service?.service_name ?? '')}</div></div>
+          <div class="col-12"><div class="text-muted small">${t('booking.confirm.services')}</div><div class="fw-semibold">${state.services.map((service) => escHtml(service.service_name)).join(', ')}</div></div>
           <div class="col-6"><div class="text-muted small">${t('booking.confirm.category')}</div><div class="fw-semibold">${escHtml(state.categoryName ?? '')}</div></div>
           <div class="col-6"><div class="text-muted small">${t('booking.confirm.staff')}</div><div class="fw-semibold">${escHtml(state.staffName ?? t('booking.step3.any'))}</div></div>
-          <div class="col-6"><div class="text-muted small">${t('booking.confirm.duration')}</div><div class="fw-semibold">${state.service?.service_duration_minutes ?? '—'} min</div></div>
+          <div class="col-6"><div class="text-muted small">${t('booking.confirm.totalDuration')}</div><div class="fw-semibold">${getSelectedServiceDuration()} min</div></div>
           <div class="col-6"><div class="text-muted small">${t('booking.confirm.date')}</div><div class="fw-semibold">${fmtDate(state.date)}</div></div>
           <div class="col-6"><div class="text-muted small">${t('booking.confirm.time')}</div><div class="fw-semibold">${fmtTime(state.time)}</div></div>
-          <div class="col-6"><div class="text-muted small">${t('booking.confirm.price')}</div><div class="fw-semibold text-primary">€${Number(state.service?.price ?? 0).toFixed(2)}</div></div>
+          <div class="col-6"><div class="text-muted small">${t('booking.confirm.totalPrice')}</div><div class="fw-semibold text-primary">€${getSelectedServicePrice().toFixed(2)}</div></div>
         </div>
       </div>
 
       <div id="confirm-form">
+        <div id="confirm-validation" class="alert alert-warning d-none" role="alert"></div>
         ${!user ? `
           <div class="mb-3">
-            <label class="form-label fw-semibold">${t('booking.confirm.yourName')}</label>
-            <input id="conf-name" type="text" class="form-control" value="${escHtml(state.name)}" placeholder="${t('booking.confirm.namePlaceholder')}" />
+            <label class="form-label fw-semibold" for="conf-name">${t('booking.confirm.yourName')} <span class="booking-required-mark">*</span></label>
+            <input id="conf-name" type="text" class="form-control" value="${escHtml(state.name)}" placeholder="${t('booking.confirm.namePlaceholder')}" aria-describedby="conf-name-feedback" />
+            <div id="conf-name-feedback" class="invalid-feedback">${t('booking.confirm.requiredName')}</div>
           </div>
           <div class="mb-3">
-            <label class="form-label fw-semibold">${t('booking.confirm.yourEmail')}</label>
-            <input id="conf-email" type="email" class="form-control" value="${escHtml(state.email)}" placeholder="you@example.com" />
+            <label class="form-label fw-semibold" for="conf-email">${t('booking.confirm.yourEmail')} <span class="booking-required-mark">*</span></label>
+            <input id="conf-email" type="email" class="form-control" value="${escHtml(state.email)}" placeholder="you@example.com" aria-describedby="conf-email-feedback" />
+            <div id="conf-email-feedback" class="invalid-feedback">${t('booking.confirm.requiredEmail')}</div>
             <div class="form-text">${t('booking.confirm.emailHint')}</div>
           </div>` : `
           <div class="mb-3">
@@ -412,11 +514,48 @@ export function afterRender({ root }) {
     const notesInput = stepEl.querySelector('#conf-notes');
     const submitBtn = stepEl.querySelector('#booking-submit');
     const spinner = submitBtn.querySelector('.spinner-border');
+    const primaryService = state.service;
+    const serviceIds = getSelectedServiceIds();
+    const validationEl = stepEl.querySelector('#confirm-validation');
+    const clearValidation = () => {
+      validationEl?.classList.add('d-none');
+      validationEl && (validationEl.innerHTML = '');
+      nameInput?.classList.remove('is-invalid');
+      emailInput?.classList.remove('is-invalid');
+    };
+
+    if (!serviceIds.length || !primaryService) {
+      showAlert(t('booking.step2.selectAtLeastOne'));
+      return;
+    }
+
+    clearValidation();
 
     if (!user) {
       state.name = nameInput?.value.trim() ?? '';
       state.email = emailInput?.value.trim() ?? '';
-      if (!state.name || !state.email) { showAlert(t('auth.error.requiredFields')); return; }
+      const missingFields = [];
+      if (!state.name) {
+        missingFields.push(t('booking.confirm.yourName'));
+        nameInput?.classList.add('is-invalid');
+      }
+      if (!state.email) {
+        missingFields.push(t('booking.confirm.yourEmail'));
+        emailInput?.classList.add('is-invalid');
+      }
+      if (missingFields.length) {
+        if (validationEl) {
+          validationEl.innerHTML = `
+            <div class="fw-semibold mb-1">${t('booking.confirm.requiredFields')}</div>
+            <div>${t('booking.confirm.requiredMessage')}</div>
+            <div class="mt-2 small">${missingFields.join(', ')}</div>`;
+          validationEl.classList.remove('d-none');
+          validationEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        } else {
+          showAlert(`${t('booking.confirm.requiredMessage')} ${missingFields.join(', ')}`);
+        }
+        return;
+      }
       if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(state.email)) { showAlert(t('booking.error.invalidEmail')); return; }
     }
 
@@ -426,52 +565,20 @@ export function afterRender({ root }) {
     hideAlert();
 
     try {
-      if (user) {
-        // Logged-in direct insert
-        const { data, error } = await supabase.from('bookings').insert({
-          user_id: user.id,
-          customer_display_name: state.name || user.email,
-          customer_email: state.email || user.email,
-          service_id: state.service.id,
-          staff_user_id: state.staff ?? null,
-          booking_date: state.date,
-          booking_time: state.time,
-          notes: state.notes || null,
-          status: 'pending'
-        }).select('id').single();
-        if (error) throw error;
-
-        // Notify via edge function
-        await supabase.functions.invoke('book-guest', {
-          body: {
-            email: state.email || user.email,
-            fullName: state.name,
-            serviceId: state.service.id,
-            staffUserId: state.staff,
-            bookingDate: state.date,
-            bookingTime: state.time,
-            notes: state.notes,
-            skipCreate: true  // booking already created, just send email
-          }
-        });
-
-        showSuccess(data.id);
-      } else {
-        // Guest — edge function creates user + booking + sends email
-        const { data, error } = await supabase.functions.invoke('book-guest', {
-          body: {
-            email: state.email,
-            fullName: state.name,
-            serviceId: state.service.id,
-            staffUserId: state.staff,
-            bookingDate: state.date,
-            bookingTime: state.time,
-            notes: state.notes
-          }
-        });
-        if (error || data?.error) throw new Error(data?.error ?? error.message);
-        showSuccess(data.bookingId, true);
-      }
+      const { data, error } = await supabase.functions.invoke('book-guest', {
+        body: {
+          email: state.email || user?.email,
+          fullName: state.name || user?.user_metadata?.full_name || '',
+          serviceId: primaryService.id,
+          serviceIds,
+          staffUserId: state.staff,
+          bookingDate: state.date,
+          bookingTime: state.time,
+          notes: state.notes
+        }
+      });
+      if (error || data?.error) throw new Error(data?.error ?? error.message);
+      showSuccess(data.bookingId, !user);
     } catch (err) {
       showAlert(err.message ?? t('error.generic'));
       submitBtn.disabled = false;
@@ -485,6 +592,13 @@ export function afterRender({ root }) {
     const notesInput = stepEl.querySelector('#conf-notes');
     const submitBtn = stepEl.querySelector('#booking-submit');
     const spinner = submitBtn.querySelector('.spinner-border');
+    const primaryService = state.service;
+    const serviceIds = getSelectedServiceIds();
+
+    if (!serviceIds.length || !primaryService) {
+      showAlert(t('booking.step2.selectAtLeastOne'));
+      return;
+    }
 
     state.notes = notesInput?.value.trim() ?? '';
     submitBtn.disabled = true;
@@ -495,55 +609,28 @@ export function afterRender({ root }) {
       // Check the new slot is still available
       const { data: slots } = await supabase.rpc('get_available_slots', {
         p_date: state.date,
-        p_service_id: state.service.id,
+        p_service_id: primaryService.id,
+        p_duration_minutes: getSelectedServiceDuration(),
         p_staff_user_id: state.staff ?? null
       });
       const slotAvailable = (slots ?? []).some((s) => s.slot_time === state.time);
       if (!slotAvailable) throw new Error(t('booking.error.slotTaken'));
 
-      if (user) {
-        const { error } = await supabase.from('bookings').update({
-          service_id: state.service.id,
-          staff_user_id: state.staff ?? null,
-          booking_date: state.date,
-          booking_time: state.time,
-          notes: state.notes || null,
-          status: 'pending',
-          updated_at: new Date().toISOString()
-        }).eq('id', state.modifyBookingId);
-        if (error) throw error;
-
-        // Send update email
-        await supabase.functions.invoke('book-guest', {
-          body: {
-            email: state.email || user.email,
-            fullName: state.name,
-            serviceId: state.service.id,
-            staffUserId: state.staff,
-            bookingDate: state.date,
-            bookingTime: state.time,
-            notes: state.notes,
-            modifyBookingId: state.modifyBookingId,
-            skipCreate: true
-          }
-        });
-        showSuccess(state.modifyBookingId, false, true);
-      } else {
-        const { data, error } = await supabase.functions.invoke('book-guest', {
-          body: {
-            email: state.email,
-            fullName: state.name,
-            serviceId: state.service.id,
-            staffUserId: state.staff,
-            bookingDate: state.date,
-            bookingTime: state.time,
-            notes: state.notes,
-            modifyBookingId: state.modifyBookingId
-          }
-        });
-        if (error || data?.error) throw new Error(data?.error ?? error.message);
-        showSuccess(data.bookingId, false, true);
-      }
+      const { data, error } = await supabase.functions.invoke('book-guest', {
+        body: {
+          email: state.email || user?.email,
+          fullName: state.name || user?.user_metadata?.full_name || '',
+          serviceId: primaryService.id,
+          serviceIds,
+          staffUserId: state.staff,
+          bookingDate: state.date,
+          bookingTime: state.time,
+          notes: state.notes,
+          modifyBookingId: state.modifyBookingId
+        }
+      });
+      if (error || data?.error) throw new Error(data?.error ?? error.message);
+      showSuccess(data.bookingId, !user, true);
     } catch (err) {
       showAlert(err.message ?? t('error.generic'));
       submitBtn.disabled = false;
@@ -570,7 +657,7 @@ export function afterRender({ root }) {
         ${isNewAccount ? `<div class="alert alert-info mb-4">${t('booking.success.accountCreated')}</div>` : ''}
         <div class="booking-confirm-card mb-4 text-start mx-auto" style="max-width:380px">
           <div class="row g-2">
-            <div class="col-6"><div class="text-muted small">${t('booking.confirm.service')}</div><div class="fw-semibold">${escHtml(state.service?.service_name ?? '')}</div></div>
+            <div class="col-12"><div class="text-muted small">${t('booking.confirm.services')}</div><div class="fw-semibold">${state.services.map((service) => escHtml(service.service_name)).join(', ')}</div></div>
             <div class="col-6"><div class="text-muted small">${t('booking.confirm.staff')}</div><div class="fw-semibold">${escHtml(state.staffName ?? t('booking.step3.any'))}</div></div>
             <div class="col-6"><div class="text-muted small">${t('booking.confirm.date')}</div><div class="fw-semibold">${fmtDate(state.date)}</div></div>
             <div class="col-6"><div class="text-muted small">${t('booking.confirm.time')}</div><div class="fw-semibold">${fmtTime(state.time)}</div></div>
@@ -589,6 +676,25 @@ export function afterRender({ root }) {
   });
 
   nextBtn.addEventListener('click', () => {
+    if (state.step === 2) {
+      if (!state.services.length) {
+        showAlert(t('booking.step2.selectAtLeastOne'));
+        return;
+      }
+      state.service = state.services[0] ?? null;
+      goToStep(3);
+      return;
+    }
+
+    if (state.step === 4) {
+      if (!state.time) {
+        showAlert(t('booking.step4.noSlots'));
+        return;
+      }
+      goToStep(5);
+      return;
+    }
+
     if (state.step < 5) goToStep(state.step + 1);
   });
 

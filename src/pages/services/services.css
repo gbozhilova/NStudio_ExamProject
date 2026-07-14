@@ -132,12 +132,12 @@
 }
 
 .category-pill-label {
-  font-family: 'Cormorant Garamond', Georgia, serif;
-  font-size: 1.12rem;
-  font-weight: 700;
-  line-height: 1.05;
+  font-family: var(--font-body);
+  font-size: 0.92rem;
+  font-weight: 600;
+  line-height: 1.15;
   color: #f5ede4;
-  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.45);
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.38);
 }
 
 .service-card-shell {
@@ -197,7 +197,7 @@
   color: #111;
   border: 0;
   padding-inline: 0;
-  font-family: 'Cormorant Garamond', Georgia, serif;
+  font-family: var(--font-display);
   font-size: 1.15rem;
   font-weight: 700;
 }

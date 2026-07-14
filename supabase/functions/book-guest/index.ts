@@ -34,11 +34,19 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     );
 
-    const { email, fullName, serviceId, staffUserId, bookingDate, bookingTime, notes, modifyBookingId } =
+    const { email, fullName, serviceId, serviceIds, staffUserId, bookingDate, bookingTime, notes, modifyBookingId } =
       await req.json();
 
-    if (!email || !serviceId || !bookingDate || !bookingTime) {
-      return ok({ error: 'email, serviceId, bookingDate and bookingTime are required' });
+    const normalizedServiceIds = [
+      ...(Array.isArray(serviceIds) ? serviceIds : []),
+      ...(serviceId ? [serviceId] : [])
+    ]
+      .map((value) => String(value).trim())
+      .filter(Boolean);
+    const uniqueServiceIds = [...new Set(normalizedServiceIds)];
+
+    if (!email || !uniqueServiceIds.length || !bookingDate || !bookingTime) {
+      return ok({ error: 'email, serviceId or serviceIds, bookingDate and bookingTime are required' });
     }
 
     // Find or create user
@@ -101,12 +109,23 @@ serve(async (req) => {
       }
     }
 
-    // Fetch service name for email
-    const { data: service } = await adminClient
+    // Fetch selected services for email and total duration/price.
+    const { data: selectedServices } = await adminClient
       .from('services')
-      .select('service_name, service_duration_minutes')
-      .eq('id', serviceId)
-      .single();
+      .select('id, service_name, service_duration_minutes, price')
+      .in('id', uniqueServiceIds);
+
+    const orderedServices = uniqueServiceIds
+      .map((id) => selectedServices?.find((serviceRow) => serviceRow.id === id))
+      .filter(Boolean);
+
+    if (!orderedServices.length) {
+      return ok({ error: 'No valid services were found for this booking.' });
+    }
+
+    const primaryServiceId = orderedServices[0].id;
+    const totalDuration = orderedServices.reduce((sum, serviceRow) => sum + Number(serviceRow.service_duration_minutes ?? 0), 0);
+    const totalPrice = orderedServices.reduce((sum, serviceRow) => sum + Number(serviceRow.price ?? 0), 0);
 
     // Fetch staff name
     const { data: staffProfile } = staffUserId
@@ -120,7 +139,7 @@ serve(async (req) => {
       const { data, error } = await adminClient
         .from('bookings')
         .update({
-          service_id: serviceId,
+          service_id: primaryServiceId,
           staff_user_id: staffUserId ?? null,
           booking_date: bookingDate,
           booking_time: bookingTime,
@@ -133,13 +152,22 @@ serve(async (req) => {
         .single();
       if (error) return ok({ error: error.message });
       bookingId = data.id;
+
+      await adminClient.from('booking_services').delete().eq('booking_id', bookingId);
+      await adminClient.from('booking_services').insert(
+        orderedServices.map((serviceRow, index) => ({
+          booking_id: bookingId,
+          service_id: serviceRow.id,
+          sort_order: index
+        }))
+      );
     } else {
       // Create new booking
       const { data, error } = await adminClient.from('bookings').insert({
         user_id: userId,
         customer_display_name: fullName ?? email.split('@')[0],
         customer_email: email,
-        service_id: serviceId,
+        service_id: primaryServiceId,
         staff_user_id: staffUserId ?? null,
         booking_date: bookingDate,
         booking_time: bookingTime,
@@ -148,6 +176,14 @@ serve(async (req) => {
       }).select('id').single();
       if (error) return ok({ error: error.message });
       bookingId = data.id;
+
+      await adminClient.from('booking_services').insert(
+        orderedServices.map((serviceRow, index) => ({
+          booking_id: bookingId,
+          service_id: serviceRow.id,
+          sort_order: index
+        }))
+      );
     }
 
     // Get staff email for notification
@@ -164,15 +200,21 @@ serve(async (req) => {
     const modifyUrl = `${appUrl}/booking?modify=${bookingId}`;
 
     if (resendKey) {
+      const servicesHtml = orderedServices
+        .map((serviceRow, index) => `<li>${index + 1}. ${escapeHtml(serviceRow.service_name)}</li>`)
+        .join('');
+
       const emailBody = `
         <h2>${isModification ? 'Booking Updated' : 'Booking Confirmed'}</h2>
         <p>Dear ${fullName ?? email},</p>
         <p>${isModification ? 'Your booking has been updated.' : 'Your appointment has been confirmed.'}</p>
         <table>
-          <tr><td><b>Service:</b></td><td>${service?.service_name ?? serviceId}</td></tr>
+          <tr><td><b>Services:</b></td><td><ul>${servicesHtml}</ul></td></tr>
           <tr><td><b>Staff:</b></td><td>${staffProfile?.full_name ?? 'Any available'}</td></tr>
           <tr><td><b>Date:</b></td><td>${bookingDate}</td></tr>
           <tr><td><b>Time:</b></td><td>${bookingTime.slice(0, 5)}</td></tr>
+          <tr><td><b>Total duration:</b></td><td>${totalDuration} min</td></tr>
+          <tr><td><b>Total price:</b></td><td>€${totalPrice.toFixed(2)}</td></tr>
           ${notes ? `<tr><td><b>Notes:</b></td><td>${notes}</td></tr>` : ''}
         </table>
         <p><a href="${modifyUrl}">Need to reschedule? Click here</a></p>
@@ -202,7 +244,8 @@ serve(async (req) => {
       console.log('RESEND_API_KEY not set — email skipped. Booking details:', {
         type: isModification ? 'modification' : 'creation',
         bookingId, email, staffEmail,
-        service: service?.service_name, bookingDate, bookingTime
+        services: orderedServices.map((serviceRow) => serviceRow.service_name),
+        bookingDate, bookingTime
       });
     }
 

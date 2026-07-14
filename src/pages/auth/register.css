@@ -6,6 +6,10 @@
   width: 100%;
   max-width: 420px;
   border-radius: 1rem;
+  background: linear-gradient(180deg, rgba(251, 246, 239, 0.98), rgba(241, 231, 219, 0.97));
+  border: 1px solid rgba(232, 216, 194, 0.82);
+  box-shadow: 0 18px 36px rgba(0, 0, 0, 0.12);
+  color: #111827;
 }
 
 .auth-logo {
@@ -13,4 +17,46 @@
   height: auto;
   object-fit: contain;
   display: inline-block;
+}
+
+.auth-card .form-label,
+.auth-card .h3 {
+  color: #111827;
+}
+
+.auth-card .form-control {
+  background: rgba(255, 255, 255, 0.88);
+  border-color: rgba(232, 216, 194, 0.95);
+  color: #111827;
+}
+
+.auth-card .form-control:focus {
+  border-color: rgba(49, 195, 176, 0.95);
+  box-shadow: 0 0 0 0.2rem rgba(49, 195, 176, 0.18);
+}
+
+.auth-card .btn-primary {
+  background: linear-gradient(135deg, #31c3b0, #279286);
+  border-color: #31c3b0;
+  color: #071315;
+  font-weight: 700;
+}
+
+.auth-card .btn-primary:hover {
+  background: linear-gradient(135deg, #2ab5a4, #237f74);
+  border-color: #2ab5a4;
+  color: #061012;
+}
+
+.auth-card .btn-link {
+  color: #0f766e;
+}
+
+.auth-card .btn-link:hover {
+  color: #0b5f58;
+}
+
+.auth-card .text-muted,
+.auth-card .text-muted.small {
+  color: rgba(17, 24, 39, 0.72) !important;
 }

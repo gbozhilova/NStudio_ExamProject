@@ -10,7 +10,7 @@ export function renderHeader(currentPath, locale, user, roles = []) {
   const staffBtns = user && isStaff
     ? `<a href="/calendar" data-nav-link data-route="/calendar" class="btn btn-sm btn-outline-light">📅 Calendar</a>` : '';
   const adminBtn = user && isAdmin
-    ? `<a href="/admin" data-nav-link data-route="/admin" class="btn btn-sm btn-warning fw-semibold">⚙️ Admin</a>` : '';
+    ? `<a href="/admin" data-nav-link data-route="/admin" class="nav-pill btn btn-sm btn-outline-light fw-semibold">⚙️ Admin</a>` : '';
   const authSlot = user
     ? `<span class="text-white-50 small d-none d-md-inline">${escapeHtml(user.email)}</span>
        <a href="/profile" data-nav-link data-route="/profile" class="btn btn-sm btn-outline-light">My Bookings</a>
