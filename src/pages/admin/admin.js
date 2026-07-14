@@ -951,12 +951,14 @@ export function afterRender({ root }) {
       <td>${escapeHtml(b.services?.service_name ?? '—')}</td>
       <td class="text-muted small">${b.booking_date} ${String(b.booking_time).slice(0, 5)}</td>
       <td><span class="badge bg-${STATUS_COLORS[b.status] ?? 'secondary'}">${b.status}</span></td>
-      <td class="text-end d-flex gap-1 justify-content-end">
-        <select class="form-select form-select-sm w-auto" data-action="update-status" data-id="${b.id}">
+      <td class="text-end">
+        <div class="admin-booking-actions">
+        <select class="form-select form-select-sm admin-status-select" data-action="update-status" data-id="${b.id}">
           ${['pending','confirmed','cancelled','completed'].map((s) =>
             `<option value="${s}" ${s === b.status ? 'selected' : ''}>${s}</option>`).join('')}
         </select>
         <button class="btn btn-sm btn-outline-secondary" data-action="booking-files" data-id="${b.id}" data-user-id="${b.user_id}" title="${t('admin.file.files')}">📎</button>
+        </div>
       </td>
     </tr>`).join('');
 
